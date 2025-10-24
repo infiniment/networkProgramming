@@ -1,0 +1,1 @@
+// JSON 메시지 구조 (type/msg/to 등)
