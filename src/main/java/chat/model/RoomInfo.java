@@ -1,1 +1,4 @@
-// 방 정보 (멤버 수 등)
+package chat.model;
+
+public class RoomInfo {
+}

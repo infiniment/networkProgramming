@@ -1,1 +1,4 @@
-// 닉네임, 상태
+package chat.model;
+
+public class User {
+}

@@ -1,0 +1,17 @@
+app:
+  server:
+    port: 5959
+  datasource:
+    url: jdbc:mysql://localhost:3306/chatdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
+    username: chatuser
+    password: chatpass
+    pool:
+      maximumPoolSize: 10
+      minimumIdle: 2
+      idleTimeoutMs: 600000     # 10?
+      connectionTimeoutMs: 30000
+  flyway:
+    locations:
+      - classpath:db/migration
+  logging:
+    level: INFO

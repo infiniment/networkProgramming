@@ -1,1 +1,4 @@
-// JSON 메시지 구조 (type/msg/to 등)
+package chat.model;
+
+public class Message {
+}
