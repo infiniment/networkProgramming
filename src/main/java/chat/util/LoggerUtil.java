@@ -1,1 +1,4 @@
-// 콘솔 로그/파일 로그
+package chat.util;
+
+public class LoggerUtil {
+}

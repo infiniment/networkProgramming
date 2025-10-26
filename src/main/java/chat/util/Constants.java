@@ -1,1 +1,4 @@
-// 포트, 버전, 명령 문자열
+package chat.util;
+
+public class Constants {
+}
