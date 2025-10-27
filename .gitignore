@@ -1,8 +1,35 @@
-### IntelliJ IDEA ###
+### Gradle ###
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-.kotlin
+
+# Gradle local caches and logs
+.gradle-cache/
+.gradle-build/
+.gradle/8.*/
+.gradle/*.lock
+.gradle/**/*.bin
+.gradle/**/*.lock
+.gradle/**/*.tmp
+
+# Local environment specific
+/local.properties
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+.kotlin/
 
 ### Eclipse ###
 .apt_generated
@@ -29,9 +56,26 @@ bin/
 ### Mac OS ###
 .DS_Store
 
- /build
- /.gradle
- /mysql-data
- *.log
- *.iml
- *.class
+### Windows ###
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+### Logs & Temp ###
+*.log
+*.tmp
+*.bak
+*.swp
+
+### Compiled class files ###
+*.class
+*.jar
+*.war
+*.ear
+
+### Others ###
+/build
+/.gradle
+/mysql-data
+node_modules/
+.env
