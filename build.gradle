@@ -9,41 +9,45 @@ version = '1.0.0'
 repositories { mavenCentral() }
 
 dependencies {
+    // JDBC
     implementation 'com.mysql:mysql-connector-j:9.1.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
-    implementation 'com.zaxxer:HikariCP:5.1.0'
+
+    // JSON (Gson 사용, Jackson은 선택사항)
     implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
+
+    // 커넥션풀 / 마이그레이션 / YAML / 로깅
+    implementation 'com.zaxxer:HikariCP:5.1.0'
     implementation 'org.flywaydb:flyway-core:10.17.0'
     implementation 'org.yaml:snakeyaml:2.3'
     implementation 'ch.qos.logback:logback-classic:1.5.8'
+
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
 }
-//dependencies {
-//    implementation 'com.mysql:mysql-connector-j:9.1.0'
-//    // JDBC + 커넥션풀
-//    implementation 'mysql:mysql-connector-j:9.0.0'
-//    implementation 'com.zaxxer:HikariCP:5.1.0'
-//
-//    // JSON
-//    implementation 'com.google.code.gson:gson:2.11.0'
-//
-//    // Flyway
-//    implementation 'org.flywaydb:flyway-core:10.17.0'
-//
-//    // YAML
-//    implementation 'org.yaml:snakeyaml:2.3'
-//
-//    // 로깅
-//    implementation 'ch.qos.logback:logback-classic:1.5.8'
-//
-//    // 테스트
-//    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
-//}
 
 application {
-    mainClass = 'chat.Main'
+    // 통합 런처로 실행 (서버 백그라운드 + GUI 즉시 표시)
+    mainClass = 'chat.Launcher'
+
+    // GUI 앱에서 headless 끄기 (혹시 모를 환경 대비)
+    applicationDefaultJvmArgs = ['-Djava.awt.headless=false']
 }
 
 java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 tasks.test { useJUnitPlatform() }
+
+// ── 개발 편의 실행 태스크 ─────────────────────────────────────────────
+tasks.register('runServer', JavaExec) {
+    group = 'application'
+    description = '서버만 실행'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'chat.Main' // 순수 서버
+}
+
+tasks.register('runClientGui', JavaExec) {
+    group = 'application'
+    description = '클라이언트 GUI만 실행'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'chat.client.ui.ClientGuiMain'
+}
