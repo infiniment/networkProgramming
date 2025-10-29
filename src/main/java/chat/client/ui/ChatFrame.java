@@ -56,6 +56,8 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
     // 상태
     private boolean isSecretMode = false;
     private Timer typingTimer;
+    // 시크릿 메시지 버킷 : sid -> 해당 sid로 렌더된 컴포넌트 목록
+    private final Map<String, java.util.List<JComponent>> secretBuckets = new HashMap<>();
     private Set<String> typingUsers = new HashSet<>();
 
     // 이모티콘 목록
@@ -65,6 +67,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             ">:(", ":*", ":'(", "^_^", "-_-", "O_O",
             "T_T", ">_<", "^^", "*_*", "@_@", "o_o"
     };
+
 
     public ChatFrame(String nickname, String serverLabel, JFrame parentFrame) {
         this.nickname = nickname;
@@ -725,13 +728,8 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         String msg = tfInput.getText().trim();
         if (msg.isEmpty() || client == null) return;
 
-        if (isSecretMode) {
-            client.sendMessage(Constants.CMD_SECRET + " " + msg);
-        } else {
-            client.sendMessage(msg);
-        }
-
-        addMyMessage(msg, isSecretMode);
+        client.sendMessage(msg);           // 평문 그대로
+        addMyMessage(msg, isSecretMode);   // 로컬 UI는 색상만 시크릿 스타일로
         tfInput.setText("");
         sendTypingStatus(false);
     }
@@ -983,10 +981,36 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         if (line == null) return;
         line = line.trim();
 
+        // 1) 시크릿 메시지 추가: "@secret:msg <sid> <닉: 메시지>"
+        if (line.startsWith(Constants.EVT_SECRET_MSG)) {
+            String rest = line.substring(Constants.EVT_SECRET_MSG.length()).trim();
+            int sp = rest.indexOf(' ');
+            if (sp > 0) {
+                String sid = rest.substring(0, sp);
+                String payload = rest.substring(sp + 1); // "<닉: 메시지>"
+                String user = extractUsername(payload);
+                String msg  = extractMessage(payload);
+                addOtherMessageSecret(user, msg, sid);
+            }
+            return;
+        }
+
+        // 2) 시크릿 클리어: "@secret:clear <sid>"
+        if (line.startsWith(Constants.EVT_SECRET_CLEAR)) {
+            String sid = line.substring(Constants.EVT_SECRET_CLEAR.length()).trim();
+            clearSecretBucket(sid);
+            return;
+        }
+
+        // 3) 나머지 종전 처리
         if (line.contains(nickname + ":")) return;
 
         if (line.startsWith("[System] ")) {
             String message = line.substring("[System] ".length()).trim();
+            // (선택) 로컬 토글 동기화
+            if (message.contains("비밀 채팅 모드 ON"))  isSecretMode = true;
+            if (message.contains("비밀 채팅 모드 OFF")) isSecretMode = false;
+
             addSystemMessage(message);
             return;
         }
@@ -1123,5 +1147,63 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             g2.drawRoundRect(x + 1, y + 1, width - 3, height - 3, radius, radius);
             g2.dispose();
         }
+    }
+
+    private void addOtherMessageSecret(String user, String text, String sid) {
+        SwingUtilities.invokeLater(() -> {
+            JPanel messagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+            messagePanel.setOpaque(false);
+            messagePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+
+            JLabel avatar = new JLabel(getAvatarIcon(user));
+            avatar.setPreferredSize(new Dimension(40, 40));
+
+            JPanel rightPanel = new JPanel();
+            rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+            rightPanel.setOpaque(false);
+
+            JLabel nameLabel = new JLabel(user);
+            nameLabel.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.BOLD, 12));
+            nameLabel.setForeground(TEXT_SECONDARY);
+            nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JPanel bubbleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+            bubbleRow.setOpaque(false);
+
+            // 시크릿 강조 색상
+            JPanel bubble = createBubble(text, new Color(231, 76, 60), Color.WHITE);
+            JLabel timeLabel = new JLabel(getCurrentTime());
+            timeLabel.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
+            timeLabel.setForeground(TEXT_SECONDARY);
+
+            bubbleRow.add(bubble);
+            bubbleRow.add(timeLabel);
+
+            rightPanel.add(nameLabel);
+            rightPanel.add(Box.createVerticalStrut(4));
+            rightPanel.add(bubbleRow);
+
+            messagePanel.add(avatar);
+            messagePanel.add(rightPanel);
+
+            chatContainer.add(messagePanel);
+            chatContainer.add(Box.createVerticalStrut(8));
+            scrollToBottom();
+
+            secretBuckets.computeIfAbsent(sid, k -> new ArrayList<>()).add(messagePanel);
+        });
+    }
+
+    private void clearSecretBucket(String sid) {
+        SwingUtilities.invokeLater(() -> {
+            java.util.List<JComponent> list = secretBuckets.remove(sid);
+            if (list != null) {
+                for (JComponent comp : list) {
+                    chatContainer.remove(comp);
+                }
+                chatContainer.revalidate();
+                chatContainer.repaint();
+            }
+        });
     }
 }
