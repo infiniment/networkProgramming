@@ -1,4 +1,4 @@
-# Swing + Socket 기반 양방향 채팅 프로젝트
+<img width="398" height="416" alt="image" src="https://github.com/user-attachments/assets/96fdb8f8-312e-4c3a-aba2-ac25f239019c" /># Swing + Socket 기반 양방향 채팅 프로젝트
 
 ## 프로젝트 개요
 이 프로젝트는 **Java Swing GUI**와 **소켓 통신(Socket Programming)** 을 활용한 
@@ -76,7 +76,8 @@ ChatApp/
 | **팀원 A** | **자폭 메시지(Self-Destruct)** | TTL이 지난 메시지 자동 삭제 |
 | **팀원 B** | **이모티콘 기능** | 텍스트 기반 `:smile:` → 이미지로 렌더링 |
 | **팀원 B** | **타이핑 중 표시** | 상대방이 입력 중임을 실시간 표시 |
-| **팀원 B** | **비밀 채팅 모드 (Whisper)** | 특정 사용자에게만 메시지 전송 |
+| **팀원 B** | **귓속말 채팅 모드 (Whisper)** | 특정 사용자에게만 메시지 전송 |
+| **팀원 B** | **시크릿 채팅 모드 (secrete)** | ON, OFF로 비밀 채팅을 치고 OFF 하면 ON 했을 때 채팅한 것들이 다 사라짐 |
 | **팀원 B** | **슬래시 명령어(Command)** | `/w`, `/me`, `/br`, `/omok` 등 명령어 처리 |
 
 ---
