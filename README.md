@@ -1,4 +1,4 @@
-<img width="398" height="416" alt="image" src="https://github.com/user-attachments/assets/96fdb8f8-312e-4c3a-aba2-ac25f239019c" /># Swing + Socket 기반 양방향 채팅 프로젝트
+# Swing + Socket 기반 양방향 채팅 프로젝트
 
 ## 프로젝트 개요
 이 프로젝트는 **Java Swing GUI**와 **소켓 통신(Socket Programming)** 을 활용한 
