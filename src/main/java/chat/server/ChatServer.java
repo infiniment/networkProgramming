@@ -8,12 +8,20 @@ import java.util.Set;
 
 public class ChatServer {
     private final Set<ClientHandler> handlers = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<String, ClientHandler> sessions = new ConcurrentHashMap<>();
     private final RoomManager roomManager;
     private ServerSocket serverSocket;
+    private final UserDirectory userDirectory = new UserDirectory();
 
     public ChatServer() {
         this.roomManager = new RoomManager();
     }
+
+    public UserDirectory getUserDirectory() { return userDirectory; } // 게터
+
+    public void registerSession(String nick, ClientHandler h) { sessions.put(nick, h); }
+    public void unregisterSession(String nick) { sessions.remove(nick); }
+    public ClientHandler getSession(String nick) { return sessions.get(nick); }
 
     public void start() {
         System.out.println("Chat Server starting on port " + Constants.DEFAULT_PORT + "...");

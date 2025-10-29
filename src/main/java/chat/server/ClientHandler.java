@@ -8,14 +8,32 @@ public class ClientHandler extends Thread {
     private final Socket socket;
     private final ChatServer server;
     private final RoomManager roomManager;
+    private final UserDirectory users;
+
     private PrintWriter out;
     private String nickname;
     private Room currentRoom;
+    private CommandRouter router;
 
     public ClientHandler(Socket socket, ChatServer server, RoomManager roomManager) {
         this.socket = socket;
         this.server = server;
         this.roomManager = roomManager;
+        this.users = server.getUserDirectory();
+    }
+
+    public Room currentRoom() { return currentRoom; }
+    public String nickname() { return nickname; }
+    public PrintWriter outWriter() { return out; }
+    public void sendMessage(String message) {
+        out.println(message); out.flush();
+    }
+
+    // 닉 변경 시: 세션 레지스트리만 갱신 (UserDirectory는 Router의 /nick 처리에서 관리)
+    public void setNickname(String newNick) {
+        server.unregisterSession(this.nickname);    // 기존 닉 해제
+        this.nickname = newNick;
+        server.registerSession(this.nickname, this); // 새 닉 등록
     }
 
     @Override
@@ -25,17 +43,35 @@ public class ClientHandler extends Thread {
         ) {
             out = new PrintWriter(socket.getOutputStream(), true);
 
+            // 최초 닉 수신 및 등록
             nickname = in.readLine();
             sendMessage("[System] Welcome, " + nickname + "!");
+            users.register(nickname, out); // 출력 스트림 등록 (귓속말용)
+            server.registerSession(nickname, this); // 세션 등록 (같은 방 검증/다이렉트 접근용)
 
+            // Router: 서버도 함께 주입해야 /to에서 같은 방 검증 가능
+            router = new CommandRouter(this, roomManager, users, server);
+
+            // 최초 방 목록 브로드캐스트
             server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
 
             String line;
             while ((line = in.readLine()) != null) {
                 if (line.startsWith("/")) {
-                    handleCommand(line);
-                } else if (currentRoom != null) {
-                    currentRoom.broadcast(nickname + ": " + line);
+                    // 코어 명령(rooms/join/quit/typing/bomb/게임)은 여기서 처리
+                    if (!handleCoreCommands(line)) {
+                        // 그 외 확장 명령은 Router로
+                        router.route(line);
+                    }
+                }else if (currentRoom != null) {
+                    if (router.isSecretMode()) {
+                        String sid = router.currentSecretSid();
+                        currentRoom.broadcast(
+                                Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + line
+                        );
+                    } else {
+                        currentRoom.broadcast(nickname + ": " + line);
+                    }
                 }
             }
 
@@ -47,9 +83,9 @@ public class ClientHandler extends Thread {
     }
 
     // ========== 명령어 처리 로직 ==========
-    private void handleCommand(String command) {
+    private boolean handleCoreCommands(String command) {
         String[] parts = command.split(" ", 2);
-        String cmd = parts[0];
+        String cmd  = parts[0];
         String args = parts.length > 1 ? parts[1].trim() : "";
 
         if (cmd.equals(Constants.CMD_ROOMS_LIST)) {
@@ -60,11 +96,33 @@ public class ClientHandler extends Thread {
             handleJoinRoom(args);
         } else if (cmd.equals(Constants.CMD_QUIT)) {
             handleQuit();
+        } else if (command.startsWith(Constants.CMD_TYPING_START)) {
+            if (currentRoom != null) currentRoom.broadcast(nickname + ": " + Constants.CMD_TYPING_START);
+        } else if (command.startsWith(Constants.CMD_TYPING_STOP)) {
+            if (currentRoom != null) currentRoom.broadcast(nickname + ": " + Constants.CMD_TYPING_STOP);
+        } else if (cmd.equals(Constants.CMD_BOMB)) {
+            handleBomb(args);
+        } else if (cmd.equals(Constants.CMD_GOMOKU)) {
+            triggerGame("gomoku");
+        } else if (cmd.equals(Constants.CMD_31)) {
+            triggerGame("br31");
+        } else {
+            return false; // 나머지는 Router에서 처리
         }
-        else {
-            sendMessage("[System] 알 수 없는 명령어입니다: " + cmd);
+        return true;
+    }
+
+
+    private void triggerGame(String game) {
+        if (currentRoom != null) {
+            // 클라: "[GAME] gomoku host=닉" → 게임 패널 열기
+            currentRoom.broadcast("[GAME] " + game + " host=" + nickname);
+        } else {
+            sendMessage("[System] 방에 입장 중이 아닙니다.");
         }
     }
+
+
 
     private void handleCreateRoom(String args) {
         String[] parts = args.split(" ");
@@ -89,6 +147,22 @@ public class ClientHandler extends Thread {
         } else {
             // 방 생성 실패 시 클라이언트에게 알림 메시지 전송
             sendMessage("[System] 방 생성 실패: 이미 존재하는 방입니다.");
+        }
+    }
+
+    private void handleBomb(String args) {
+        // /bomb [초] [메시지]
+        String[] sp = args.split("\\s+", 2);
+        int sec = 5;
+        String text = "";
+        try {
+            if (sp.length >= 1) sec = Integer.parseInt(sp[0]);
+            if (sp.length >= 2) text = sp[1];
+        } catch (Exception ignored) {}
+        if (currentRoom != null) {
+            currentRoom.broadcast("[BOMB " + sec + "s] " + nickname + ": " + text);
+        } else {
+            sendMessage("[System] 방에 입장 중이 아닙니다.");
         }
     }
 
@@ -126,10 +200,6 @@ public class ClientHandler extends Thread {
         handleLeaveRoom(true);
     }
 
-    public void sendMessage(String message) {
-        out.println(message);
-        out.flush();
-    }
 
     private void sendRoomListUpdate() {
         String jsonList = roomManager.listRoomsAsJson();
