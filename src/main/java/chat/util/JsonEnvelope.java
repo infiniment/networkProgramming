@@ -1,5 +1,6 @@
     package chat.util;
 
+    import chat.server.ClientHandler;
     import com.fasterxml.jackson.databind.ObjectMapper;
 
     import java.util.LinkedHashMap;
@@ -96,6 +97,5 @@
                 return "{\"v\":1,\"type\":\"system\",\"text\":\"encode_error\"}";
             }
         }
-
 
     }
