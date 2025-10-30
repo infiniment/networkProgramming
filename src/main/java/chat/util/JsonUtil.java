@@ -2,6 +2,7 @@ package chat.util;
 
 import chat.model.RoomDto;
 import java.util.List;
+import java.util.Map;
 
 /**
  * [Non-Library] 서버에서 클라이언트에게 전송할 JSON 문자열을 수동으로 생성하는 유틸리티입니다.
@@ -71,6 +72,19 @@ public class JsonUtil {
         return value.replace("\"", "\\\"")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
+    }
+
+    public static String mapToJson(Map<String, String> map) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        int i = 0, n = map.size();
+        for (Map.Entry<String,String> e : map.entrySet()) {
+            sb.append("\"").append(escapeJson(e.getKey())).append("\":")
+                    .append("\"").append(escapeJson(e.getValue())).append("\"");
+            if (++i < n) sb.append(",");
+        }
+        sb.append("}");
+        return sb.toString();
     }
 
     // 클라이언트가 서버로 메시지를 보낼 때 사용될 수 있는 범용 to-json 메서드 (선택 사항)

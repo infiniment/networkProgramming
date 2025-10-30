@@ -1,6 +1,8 @@
 package chat.server;
 
 import chat.util.Constants;
+import chat.util.JsonEnvelope;
+
 import java.net.*;
 import java.io.*;
 import java.util.concurrent.*;
@@ -65,15 +67,21 @@ public class ChatServer {
     public void broadcastToAllClients(String command) {
         if (command.equals(Constants.CMD_ROOMS_LIST)) {
             String jsonList = roomManager.listRoomsAsJson();
-            String fullCommand = Constants.RESPONSE_ROOMS + " " + jsonList;
 
-            for (ClientHandler handler : handlers) {
-                handler.sendMessage(fullCommand);
+            // 2-1) 레거시: "@rooms <배열JSON>"
+            String legacy = Constants.RESPONSE_ROOMS + " " + jsonList;
+
+            // 2-2) 신규 JSON: type="rooms", text에 배열JSON 싣기
+            String payload = JsonEnvelope.build(
+                    "rooms", "server", null, jsonList, null, null, null
+            );
+
+            for (ClientHandler h : handlers) {
+                h.sendMessage(legacy);
+                h.sendMessage(payload);
             }
         } else {
-            for (ClientHandler handler : handlers) {
-                handler.sendMessage(command);
-            }
+            for (ClientHandler h : handlers) h.sendMessage(command);
         }
     }
 }
