@@ -191,6 +191,7 @@ public class ClientHandler extends Thread {
         }
     }
 
+    // 브로드캐스트 추가.
     private void handleJoinRoom(String roomName) {
         if (currentRoom != null) {
             handleLeaveRoom(false);
@@ -201,6 +202,9 @@ public class ClientHandler extends Thread {
             currentRoom = joinedRoom;
             sendMessage("[System] '" + roomName + "' 방에 입장했습니다.");
             currentRoom.broadcast(nickname + "님이 입장했습니다.");
+
+            // ✨ 수정: 모든 클라이언트에게 업데이트된 방 목록 브로드캐스트
+            server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
         } else {
             sendMessage("[System] 방 입장에 실패했습니다. 정원 초과이거나 방이 존재하지 않습니다.");
         }

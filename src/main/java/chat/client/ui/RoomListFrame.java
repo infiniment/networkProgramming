@@ -375,19 +375,28 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             }
         }
     }
-
-    // ========== 방 입장 ==========
+    // 참여자 수 초기화 기능 추가.
     private void joinSelected() {
         RoomDto r = roomList.getSelectedValue();
         if (r == null || client == null) return;
-        // Constants.CMD_JOIN_ROOM 상수 적용
+
+        // 서버에 입장 명령 전송
         client.sendMessage(Constants.CMD_JOIN_ROOM + " " + r.name);
 
+        // ChatFrame 생성
         ChatFrame chat = new ChatFrame(nickname, serverLabel + " · " + r.name, this);
+
+        // ✨ 수정: 현재 참여자 수로 헤더 초기화
+        chat.updateMemberCount(r.participants);
+
+        // 클라이언트에 바인딩
         chat.bind(client);
+
+        // 버퍼에 있던 메시지 표시
         for (String line : passthroughLog) chat.onMessageReceived(line);
         passthroughLog.clear();
 
+        // 화면 전환
         chat.setVisible(true);
         setVisible(false);  // dispose 대신 숨김
     }
@@ -462,21 +471,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         long active = rooms.stream().filter(r -> r.active).count();
         lblActiveChats.setText(String.valueOf(active));
 
-        // 더블클릭 리스너 제거 - 오직 입장하기 버튼만 작동
-        // roomList.addMouseListener(new MouseAdapter() {
-        //     public void mouseClicked(MouseEvent e) {
-        //         if (e.getClickCount() == 2) joinSelected();
-        //     }
-        // });
-
-        // 엔터키 리스너 제거 - 오직 입장하기 버튼만 작동
-        // roomList.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("ENTER"), "join");
-        // roomList.getActionMap().put("join", new AbstractAction() {
-        //     @Override
-        //     public void actionPerformed(java.awt.event.ActionEvent e) {
-        //         joinSelected();
-        //     }
-        // });
     }
 
     // ========== JSON 파싱 (수동) ==========

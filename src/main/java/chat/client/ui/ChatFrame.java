@@ -15,7 +15,7 @@ import java.util.Timer;
 
 /**
  * ChatFrame - 고급 채팅 화면
- * 이모티콘 패널, 폭탄 메시지 타이머, 말풍선 스타일
+ * 이모티콘 패널, 폭탄 메시지 타이머, 말풍선 스타일, 미니게임 선택
  */
 public class ChatFrame extends JFrame implements ChatClient.MessageListener {
 
@@ -45,8 +45,10 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
     private JLabel lblStatusIcon;
     private JLabel lblStatusText;
     private JLabel lblTypingIndicator;
+    private JLabel lblMembers;
     private JButton btnSend;
     private JToggleButton btnSecretMode;
+    private JButton btnMiniGame;
     private JButton btnEmoticon;
     private JButton btnBombMessage;
 
@@ -104,6 +106,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
     }
 
     // ========== 헤더 영역 ==========
+    // 미니게임 버츤 추가 완료
     private JComponent buildHeader() {
         JPanel header = new RoundedPanel(15);
         header.setBackground(CARD_BG);
@@ -184,7 +187,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         lblRoom.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 15));
         lblRoom.setForeground(TEXT_PRIMARY);
 
-        JLabel lblMembers = new JLabel("참여자 0명");
+        lblMembers = new JLabel("참여자 0명");
         lblMembers.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
         lblMembers.setForeground(TEXT_SECONDARY);
 
@@ -194,15 +197,18 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         leftPanel.add(btnBack);
         leftPanel.add(roomInfo);
 
-        // 오른쪽 - 시크릿 모드 + 상태 + 닉네임
+        // 오른쪽 - 시크릿 모드 + 미니게임 + 상태 + 닉네임
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         rightPanel.setOpaque(false);
 
         // 시크릿 모드 토글
         btnSecretMode = createSecretModeButton();
 
-        // 상태 표시 (에러 해결 지점)
-        lblStatusIcon = new JLabel(makeStatusIcon(PRIMARY)); // <--- makeStatusIcon 호출
+        // 미니게임 버튼 추가
+        btnMiniGame = createMiniGameButton();
+
+        // 상태 표시
+        lblStatusIcon = new JLabel(makeStatusIcon(PRIMARY));
         lblStatusText = new JLabel("연결");
         lblStatusText.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
         lblStatusText.setForeground(TEXT_SECONDARY);
@@ -213,6 +219,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         lblUser.setForeground(TEXT_PRIMARY);
 
         rightPanel.add(btnSecretMode);
+        rightPanel.add(btnMiniGame);
         rightPanel.add(lblStatusIcon);
         rightPanel.add(lblStatusText);
         rightPanel.add(lblUser);
@@ -488,6 +495,165 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         dialog.setVisible(true);
     }
 
+    // 게임 선택 모달 추가.
+    private void showGameSelectionDialog() {
+        JDialog dialog = new JDialog(this, "게임 선택", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.setSize(535, 320);
+        dialog.setLocationRelativeTo(this);
+        dialog.setResizable(false);
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        mainPanel.setBackground(Color.WHITE);
+
+        // 제목
+        JLabel title = new JLabel("게임 선택");
+        title.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 18));
+        title.setForeground(TEXT_PRIMARY);
+
+        JLabel subtitle = new JLabel("채팅방에서 함께 즐길 게임을 선택하세요");
+        subtitle.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 12));
+        subtitle.setForeground(TEXT_SECONDARY);
+
+        JPanel titlePanel = new JPanel(new GridLayout(2, 1, 0, 5));
+        titlePanel.setOpaque(false);
+        titlePanel.add(title);
+        titlePanel.add(subtitle);
+
+        // 게임 선택 패널
+        JPanel gamePanel = new JPanel(new GridLayout(1, 2, 16, 0));
+        gamePanel.setOpaque(false);
+
+        // ✨ 오목 카드 (이미지 파일명 변경)
+        JPanel omokCard = createGameCard(
+                "game1.png",
+                "오목",
+                "2인용 • 오목 게임"
+        );
+        omokCard.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                selectGame("omok");
+                dialog.dispose();
+            }
+        });
+
+        // ✨ 베스킨라빈스31 카드 (이미지 파일명 변경)
+        JPanel br31Card = createGameCard(
+                "BRbaskinrobbins.png",
+                "베스킨라빈스31",
+                "다인용 • 베스킨라빈스31"
+        );
+        br31Card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                selectGame("br31");
+                dialog.dispose();
+            }
+        });
+
+        gamePanel.add(omokCard);
+        gamePanel.add(br31Card);
+
+        // 취소 버튼
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton btnCancel = createDialogButton("취소", new Color(149, 165, 166));
+        btnCancel.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(btnCancel);
+
+        mainPanel.add(titlePanel, BorderLayout.NORTH);
+        mainPanel.add(gamePanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.add(mainPanel);
+        dialog.setVisible(true);
+    }
+
+    // 팝업창에 이미지 + 위치조정
+    private JPanel createGameCard(String imagePath, String gameName, String description) {
+        JPanel card = new JPanel(new BorderLayout(0, 12));
+        card.setBackground(new Color(252, 245, 235));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(240, 240, 240), 1),
+                new EmptyBorder(20, 20, 20, 20)
+        ));
+        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // 마우스 호버 효과
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                card.setBackground(new Color(245, 235, 220));
+                card.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(INPUT_BORDER, 2),
+                        new EmptyBorder(20, 20, 20, 20)
+                ));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                card.setBackground(new Color(252, 245, 235));
+                card.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(240, 240, 240), 1),
+                        new EmptyBorder(20, 20, 20, 20)
+                ));
+            }
+        });
+
+        // ✨ 이미지 아이콘 (위치 조정)
+        JLabel imageLabel = new JLabel();
+        ImageIcon icon = loadGameImage(imagePath);
+        if (icon != null) {
+            // 이미지 크기 조정 (120x120)
+            Image scaledImage = icon.getImage().getScaledInstance(70, 70, Image.SCALE_SMOOTH);
+            imageLabel.setIcon(new ImageIcon(scaledImage));
+        } else {
+            // 이미지 로드 실패 시 폴백 (이모지)
+            imageLabel.setText(imagePath.contains("game1") ? "🟡" : "📊");
+            imageLabel.setFont(new Font("Dialog", Font.PLAIN, 48));
+        }
+        imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        imageLabel.setPreferredSize(new Dimension(0, 70));  // ✨ 변경: 140 → 100 (위로 올림)
+
+        // 게임 이름
+        JLabel nameLabel = new JLabel(gameName);
+        nameLabel.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 16));
+        nameLabel.setForeground(TEXT_PRIMARY);
+        nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        // 게임 설명
+        JLabel descLabel = new JLabel("<html><body style='text-align: center;'>" + description + "</body></html>");
+        descLabel.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
+        descLabel.setForeground(TEXT_SECONDARY);
+        descLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        card.add(imageLabel, BorderLayout.NORTH);
+        card.add(nameLabel, BorderLayout.CENTER);
+        card.add(descLabel, BorderLayout.SOUTH);
+
+        return card;
+    }
+
+    private void selectGame(String gameType) {
+        if (client == null) {
+            JOptionPane.showMessageDialog(this, "서버 연결이 끊어졌습니다.", "오류", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 서버에 게임 시작 명령 전송
+        if (gameType.equals("omok")) {
+            client.sendMessage(Constants.CMD_GOMOKU);
+            addSystemMessage("🎮 오목 게임이 시작되었습니다!");
+        } else if (gameType.equals("br31")) {
+            client.sendMessage(Constants.CMD_31);
+            addSystemMessage("🎮 베스킨라빈스31 게임이 시작되었습니다!");
+        }
+    }
+
     private int getSecondsFromCombo(String selected) {
         return switch (selected) {
             case "10초" -> 10;
@@ -593,6 +759,71 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
                 showSecretModeNotice();
             }
         });
+
+        return btn;
+    }
+
+    // 미니게임 버튼 추가
+    private JButton createMiniGameButton() {
+        JButton btn = new JButton("🎮") {
+            private boolean hover = false;
+
+            {
+                addMouseListener(new MouseAdapter() {
+                    public void mouseEntered(MouseEvent e) {
+                        if (isEnabled()) {
+                            hover = true;
+                            repaint();
+                        }
+                    }
+                    public void mouseExited(MouseEvent e) {
+                        hover = false;
+                        repaint();
+                    }
+                });
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                if (hover) {
+                    g2.setColor(INPUT_BORDER);
+                } else {
+                    g2.setColor(new Color(230, 230, 230));
+                }
+
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                g2.setFont(new Font("Dialog", Font.PLAIN, 16));
+                g2.setColor(TEXT_PRIMARY);
+
+                FontMetrics fm = g2.getFontMetrics();
+                String text = "🎮";
+                int textWidth = fm.stringWidth(text);
+                int textHeight = fm.getAscent();
+
+                int x = (getWidth() - textWidth) / 2;
+                int y = (getHeight() + textHeight) / 2 - 2;
+
+                g2.drawString(text, x, y);
+                g2.dispose();
+            }
+        };
+
+        btn.setPreferredSize(new Dimension(40, 30));
+        btn.setMinimumSize(new Dimension(40, 30));
+        btn.setMaximumSize(new Dimension(40, 30));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setOpaque(false);
+        btn.setToolTipText("미니게임 선택");
+
+        btn.addActionListener(e -> showGameSelectionDialog());
 
         return btn;
     }
@@ -956,7 +1187,12 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         addOtherMessage("System", message);
     }
 
-    // TODO: public void updateMemberCount(int count) 메서드 구현 필요
+    // 참여자 수 업데이트 함수
+    public void updateMemberCount(int count) {
+        SwingUtilities.invokeLater(() -> {
+            lblMembers.setText("참여자 " + count + "명");
+        });
+    }
 
     // ========== ChatClient 바인딩 ==========
     public void bind(ChatClient client) {
@@ -1062,7 +1298,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         });
     }
 
-    // ========== 유틸리티 (에러 해결) ==========
+    // ========== 유틸리티 ==========
     private Icon makeStatusIcon(Color color) {
         int size = 10;
         return new Icon() {
@@ -1205,5 +1441,20 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
                 chatContainer.repaint();
             }
         });
+    }
+    // 이미지 로드하기
+    private ImageIcon loadGameImage(String filename) {
+        try {
+            String path = "images/" + filename;
+            InputStream imageStream = getClass().getClassLoader().getResourceAsStream(path);
+            if (imageStream != null) {
+                byte[] imageData = imageStream.readAllBytes();
+                imageStream.close();
+                return new ImageIcon(imageData);
+            }
+        } catch (Exception e) {
+            System.err.println("이미지 로드 실패: " + filename);
+        }
+        return null;
     }
 }
