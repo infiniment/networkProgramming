@@ -34,6 +34,7 @@ public class Constants {
     public static final String PKG_EMOJI   = "EMOJI";   // "EMOJI :smile:"
     public static final String PKG_STICKER = "STICKER"; // "STICKER bear_hello"
 
+    public static final String EVT_MEMBER_COUNT = "@member:count";
     public static final String CMD_EMOJI_LIST = "/emoji.list";
     public static final String EVT_EMOJI_LIST = "@emoji:list";
 
