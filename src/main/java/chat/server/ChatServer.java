@@ -1,8 +1,6 @@
 package chat.server;
 
 import chat.util.Constants;
-import chat.util.JsonEnvelope;
-
 import java.net.*;
 import java.io.*;
 import java.util.concurrent.*;
@@ -12,14 +10,17 @@ public class ChatServer {
     private final Set<ClientHandler> handlers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<String, ClientHandler> sessions = new ConcurrentHashMap<>();
     private final RoomManager roomManager;
+    private final OmokGameManager gameManager;  // ✅ 추가
     private ServerSocket serverSocket;
     private final UserDirectory userDirectory = new UserDirectory();
 
     public ChatServer() {
         this.roomManager = new RoomManager();
+        this.gameManager = new OmokGameManager(this);  // ✅ 초기화
     }
 
-    public UserDirectory getUserDirectory() { return userDirectory; } // 게터
+    public UserDirectory getUserDirectory() { return userDirectory; }
+    public OmokGameManager getGameManager() { return gameManager; }  // ✅ 게터 추가
 
     public void registerSession(String nick, ClientHandler h) { sessions.put(nick, h); }
     public void unregisterSession(String nick) { sessions.remove(nick); }
@@ -31,7 +32,8 @@ public class ChatServer {
             serverSocket = new ServerSocket(Constants.DEFAULT_PORT);
             while (true) {
                 Socket socket = serverSocket.accept();
-                ClientHandler handler = new ClientHandler(socket, this, roomManager);
+                // ✅ OmokGameManager 전달
+                ClientHandler handler = new ClientHandler(socket, this, roomManager, gameManager);
                 handlers.add(handler);
                 handler.start();
                 System.out.println("New client connected: " + socket);
@@ -49,7 +51,7 @@ public class ChatServer {
         }
     }
 
-    public void stop() { // Launcher/Main에서 호출되는 안전 종료 메서드
+    public void stop() {
         System.out.println("Chat Server shutting down...");
         if (serverSocket != null && !serverSocket.isClosed()) {
             try {
@@ -67,21 +69,15 @@ public class ChatServer {
     public void broadcastToAllClients(String command) {
         if (command.equals(Constants.CMD_ROOMS_LIST)) {
             String jsonList = roomManager.listRoomsAsJson();
+            String fullCommand = Constants.RESPONSE_ROOMS + " " + jsonList;
 
-            // 2-1) 레거시: "@rooms <배열JSON>"
-            String legacy = Constants.RESPONSE_ROOMS + " " + jsonList;
-
-            // 2-2) 신규 JSON: type="rooms", text에 배열JSON 싣기
-            String payload = JsonEnvelope.build(
-                    "rooms", "server", null, jsonList, null, null, null
-            );
-
-            for (ClientHandler h : handlers) {
-                h.sendMessage(legacy);
-                h.sendMessage(payload);
+            for (ClientHandler handler : handlers) {
+                handler.sendMessage(fullCommand);
             }
         } else {
-            for (ClientHandler h : handlers) h.sendMessage(command);
+            for (ClientHandler handler : handlers) {
+                handler.sendMessage(command);
+            }
         }
     }
 }

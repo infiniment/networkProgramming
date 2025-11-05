@@ -12,10 +12,13 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 import java.util.Timer;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * ChatFrame - 고급 채팅 화면
  * 이모티콘 패널, 폭탄 메시지 타이머, 말풍선 스타일, 미니게임 선택
+ *
+ * 🔧 수정: @game: 메시지를 가장 먼저 처리하여 게스트도 완벽히 받음
  */
 public class ChatFrame extends JFrame implements ChatClient.MessageListener {
 
@@ -70,7 +73,11 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             "T_T", ">_<", "^^", "*_*", "@_@", "o_o"
     };
 
+    // ✨ 게임 리스너 리스트 추가
+    private List<ChatClient.MessageListener> gameListeners = new CopyOnWriteArrayList<>();
 
+    // 🔧 이 줄 추가!
+    private List<String> gameMessageBuffer = new CopyOnWriteArrayList<>();
     public ChatFrame(String nickname, String serverLabel, JFrame parentFrame) {
         this.nickname = nickname;
         this.serverLabel = serverLabel;
@@ -105,8 +112,48 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         });
     }
 
+    // ========== 게임 리스너 관리 ==========
+    public void addGameListener(ChatClient.MessageListener listener) {
+        System.out.println("[ChatFrame] 🎮 게임 리스너 등록 시작: " +
+                listener.getClass().getSimpleName());
+
+        synchronized (gameListeners) {
+            gameListeners.add(listener);
+            System.out.println("[ChatFrame] ✅ 리스너 등록 완료 (총 " + gameListeners.size() + "개)");
+        }
+
+        // 🔧 **즉시 버퍼 확인 및 전달**
+        System.out.println("[ChatFrame] 📊 버퍼된 게임 메시지 개수: " + gameMessageBuffer.size());
+
+        if (!gameMessageBuffer.isEmpty()) {
+            System.out.println("[ChatFrame] 🎯 버퍼에 메시지 있음 - 즉시 전달 시작");
+
+            // 버퍼 복사본 생성 (동시성 안전)
+            java.util.List<String> bufferCopy = new java.util.ArrayList<>(gameMessageBuffer);
+
+            // 즉시 전달
+            for (String msg : bufferCopy) {
+                System.out.println("[ChatFrame] 📤 버퍼→리스너: " + msg);
+                try {
+                    listener.onMessageReceived(msg);
+                } catch (Exception e) {
+                    System.err.println("[ChatFrame] ❌ 전달 실패: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+
+            gameMessageBuffer.clear();
+            System.out.println("[ChatFrame] ✅ 버퍼 전달 완료");
+        } else {
+            System.out.println("[ChatFrame] ℹ️ 버퍼에 메시지 없음");
+        }
+    }
+
+    public void removeGameListener(ChatClient.MessageListener listener) {
+        gameListeners.remove(listener);
+    }
+
     // ========== 헤더 영역 ==========
-    // 미니게임 버츤 추가 완료
     private JComponent buildHeader() {
         JPanel header = new RoundedPanel(15);
         header.setBackground(CARD_BG);
@@ -525,7 +572,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         JPanel gamePanel = new JPanel(new GridLayout(1, 2, 16, 0));
         gamePanel.setOpaque(false);
 
-        // ✨ 오목 카드 (이미지 파일명 변경)
+        // ✨ 오목 카드
         JPanel omokCard = createGameCard(
                 "game1.png",
                 "오목",
@@ -539,7 +586,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             }
         });
 
-        // ✨ 베스킨라빈스31 카드 (이미지 파일명 변경)
+        // ✨ 베스킨라빈스31 카드
         JPanel br31Card = createGameCard(
                 "BRbaskinrobbins.png",
                 "베스킨라빈스31",
@@ -604,20 +651,18 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             }
         });
 
-        // ✨ 이미지 아이콘 (위치 조정)
+        // ✨ 이미지 아이콘
         JLabel imageLabel = new JLabel();
         ImageIcon icon = loadGameImage(imagePath);
         if (icon != null) {
-            // 이미지 크기 조정 (120x120)
             Image scaledImage = icon.getImage().getScaledInstance(70, 70, Image.SCALE_SMOOTH);
             imageLabel.setIcon(new ImageIcon(scaledImage));
         } else {
-            // 이미지 로드 실패 시 폴백 (이모지)
             imageLabel.setText(imagePath.contains("game1") ? "🟡" : "📊");
             imageLabel.setFont(new Font("Dialog", Font.PLAIN, 48));
         }
         imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        imageLabel.setPreferredSize(new Dimension(0, 70));  // ✨ 변경: 140 → 100 (위로 올림)
+        imageLabel.setPreferredSize(new Dimension(0, 70));
 
         // 게임 이름
         JLabel nameLabel = new JLabel(gameName);
@@ -644,13 +689,15 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             return;
         }
 
-        // 서버에 게임 시작 명령 전송
         if (gameType.equals("omok")) {
-            client.sendMessage(Constants.CMD_GOMOKU);
-            addSystemMessage("🎮 오목 게임이 시작되었습니다!");
+            OmokGameFrame omokGame = new OmokGameFrame(nickname, client, this);
+            omokGame.setAlwaysOnTop(true);
+            omokGame.requestFocus();
+            omokGame.setVisible(true);
+            addSystemMessage("🎮 " + nickname + "님이 미니게임에 참여하였습니다.");
         } else if (gameType.equals("br31")) {
             client.sendMessage(Constants.CMD_31);
-            addSystemMessage("🎮 베스킨라빈스31 게임이 시작되었습니다!");
+            addSystemMessage("🎮 베스킨라빈스31 게임을 시작했습니다!");
         }
     }
 
@@ -959,8 +1006,8 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         String msg = tfInput.getText().trim();
         if (msg.isEmpty() || client == null) return;
 
-        client.sendMessage(msg);           // 평문 그대로
-        addMyMessage(msg, isSecretMode);   // 로컬 UI는 색상만 시크릿 스타일로
+        client.sendMessage(msg);
+        addMyMessage(msg, isSecretMode);
         tfInput.setText("");
         sendTypingStatus(false);
     }
@@ -1210,20 +1257,60 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
 
     @Override
     public void onMessageReceived(String line) {
+        System.out.println("[ChatFrame] 📥 onMessageReceived 호출됨");
+        System.out.println("[ChatFrame] 수신 내용: " + line);
+        System.out.println("[ChatFrame] 리스너 개수: " + gameListeners.size());
+
+        // 🔧 가장 먼저 처리: 게임 메시지
+        if (line.startsWith("@game:")) {
+            System.out.println("[ChatFrame] ✅ @game: 으로 시작 - 게임 메시지 감지!");
+            handleGameMessage(line);
+            return;  // 🔧 중요: 여기서 반드시 return!
+        }
+
+        // 그 다음에 일반 메시지 처리
+        System.out.println("[ChatFrame] 일반 메시지로 처리");
         parseAndDisplayMessage(line);
+    }
+    // 🔧 새로운 메서드: 게임 메시지 전용 처리
+    private void handleGameMessage(String line) {
+        System.out.println("[ChatFrame] 🎮 게임 메시지 처리 시작");
+
+        synchronized (gameListeners) {
+            System.out.println("[ChatFrame] 📊 리스너 상태: " +
+                    (gameListeners.isEmpty() ? "없음 (버퍼링)" : gameListeners.size() + "개 등록"));
+
+            if (gameListeners.isEmpty()) {
+                // 🔧 리스너가 없으면 버퍼에 저장
+                System.out.println("[ChatFrame] ⚠️ 리스너 없음! 메시지 버퍼링: " + line);
+                gameMessageBuffer.add(line);
+                return;
+            }
+
+            // 🔧 리스너가 있으면 즉시 전달
+            for (ChatClient.MessageListener listener : gameListeners) {
+                System.out.println("[ChatFrame] 📤 리스너(" +
+                        listener.getClass().getSimpleName() + ")에 전달: " + line);
+                try {
+                    listener.onMessageReceived(line);
+                } catch (Exception e) {
+                    System.err.println("[ChatFrame] ❌ 리스너 호출 중 오류: " + e.getMessage());
+                }
+            }
+        }
     }
 
     private void parseAndDisplayMessage(String line) {
         if (line == null) return;
         line = line.trim();
 
-        // 1) 시크릿 메시지 추가: "@secret:msg <sid> <닉: 메시지>"
+        // 시크릿 메시지
         if (line.startsWith(Constants.EVT_SECRET_MSG)) {
             String rest = line.substring(Constants.EVT_SECRET_MSG.length()).trim();
             int sp = rest.indexOf(' ');
             if (sp > 0) {
                 String sid = rest.substring(0, sp);
-                String payload = rest.substring(sp + 1); // "<닉: 메시지>"
+                String payload = rest.substring(sp + 1);
                 String user = extractUsername(payload);
                 String msg  = extractMessage(payload);
                 addOtherMessageSecret(user, msg, sid);
@@ -1231,26 +1318,26 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             return;
         }
 
-        // 2) 시크릿 클리어: "@secret:clear <sid>"
+        // 시크릿 클리어
         if (line.startsWith(Constants.EVT_SECRET_CLEAR)) {
             String sid = line.substring(Constants.EVT_SECRET_CLEAR.length()).trim();
             clearSecretBucket(sid);
             return;
         }
 
-        // 3) 나머지 종전 처리
+        // 자신의 메시지 무시
         if (line.contains(nickname + ":")) return;
 
+        // 시스템 메시지
         if (line.startsWith("[System] ")) {
             String message = line.substring("[System] ".length()).trim();
-            // (선택) 로컬 토글 동기화
             if (message.contains("비밀 채팅 모드 ON"))  isSecretMode = true;
             if (message.contains("비밀 채팅 모드 OFF")) isSecretMode = false;
-
             addSystemMessage(message);
             return;
         }
 
+        // 타이핑 상태
         if (line.contains(Constants.CMD_TYPING_START) || line.contains(Constants.CMD_TYPING_STOP)) {
             String status = line.contains(Constants.CMD_TYPING_START) ? Constants.CMD_TYPING_START : Constants.CMD_TYPING_STOP;
             String user = extractUsername(line);
@@ -1264,6 +1351,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             return;
         }
 
+        // 일반 메시지
         String user = extractUsername(line);
         String message = extractMessage(line);
 
@@ -1406,7 +1494,6 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             JPanel bubbleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
             bubbleRow.setOpaque(false);
 
-            // 시크릿 강조 색상
             JPanel bubble = createBubble(text, new Color(231, 76, 60), Color.WHITE);
             JLabel timeLabel = new JLabel(getCurrentTime());
             timeLabel.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
@@ -1442,6 +1529,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             }
         });
     }
+
     // 이미지 로드하기
     private ImageIcon loadGameImage(String filename) {
         try {
