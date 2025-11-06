@@ -55,18 +55,31 @@ public class ClientHandler extends Thread {
 
             String line;
             while ((line = in.readLine()) != null) {
+                // 🪶 입력 로그
+                System.out.printf("[SERVER-LOG] [RECV] (%s): %s%n", nickname, line);
+
                 if (line.startsWith("/")) {
                     if (!handleCoreCommands(line)) {
                         router.route(line);
                     }
-                }else if (currentRoom != null) {
+                } else if (currentRoom != null) {
                     if (router.isSecretMode()) {
                         String sid = router.currentSecretSid();
                         currentRoom.broadcast(
                                 Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + line
                         );
                     } else {
-                        currentRoom.broadcast(nickname + ": " + line);
+                        // ✅ 수정 구간 시작
+                        if (line.startsWith("@game:")) {
+                            // 🎮 게임 관련 메시지는 prefix 제거
+                            System.out.printf("[SERVER-LOG] [GAME-BROADCAST] from=%s msg=%s%n", nickname, line);
+                            currentRoom.broadcast(line);
+                        } else {
+                            // 💬 일반 메시지는 기존처럼 prefix 포함
+                            System.out.printf("[SERVER-LOG] [CHAT-BROADCAST] from=%s msg=%s%n", nickname, line);
+                            currentRoom.broadcast(nickname + ": " + line);
+                        }
+                        // ✅ 수정 구간 끝
                     }
                 }
             }
