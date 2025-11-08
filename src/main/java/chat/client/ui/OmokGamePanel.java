@@ -6,15 +6,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
-/**
- * OmokGamePanel - 마우스 미리보기 + 반투명 돌 표시
- *
- * 🔧 주요 수정사항:
- *   1. 마우스 hover 시 반투명 돌 미리보기
- *   2. 격자선 하이라이트 효과
- *   3. 동적 커서 변경 (손/기본)
- *   4. 내 턴일 때만 미리보기 표시
- */
 public class OmokGamePanel extends JPanel {
     private static final int BOARD_SIZE = 15;
     private static final int CELL_SIZE = 35;

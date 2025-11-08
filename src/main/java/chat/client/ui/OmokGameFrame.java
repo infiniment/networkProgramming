@@ -9,14 +9,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.InputStream;
 
-/**
- * OmokGameFrame - 게스트 "대기 중" 문제 해결 + 이모지 수정
- *
- * 🔧 수정사항:
- *   1. 게스트도 @game:start 메시지 제대로 받고 처리
- *   2. ⚪⚫ → ■□ (검정/흰색 네모)로 변경
- *   3. 플레이어 표시 동적 업데이트
- */
 public class OmokGameFrame extends JFrame implements ChatClient.MessageListener {
     private static final Color BG_COLOR = new Color(240, 242, 245);
     private static final Color CARD_BG = Color.WHITE;

@@ -17,8 +17,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * ChatFrame - 고급 채팅 화면
  * 이모티콘 패널, 폭탄 메시지 타이머, 말풍선 스타일, 미니게임 선택
- *
- * 🔧 수정: @game: 메시지를 가장 먼저 처리하여 게스트도 완벽히 받음
  */
 public class ChatFrame extends JFrame implements ChatClient.MessageListener {
 
@@ -1006,7 +1004,22 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         String msg = tfInput.getText().trim();
         if (msg.isEmpty() || client == null) return;
 
-        client.sendMessage(msg);
+        // ✅ 이모티콘/스티커 감지 및 프로토콜 변환
+        if (msg.matches("^:[a-z_]+:$")) {
+            // 이모티콘: :smile:, :sad:, :heart: 등
+            String packet = Constants.PKG_EMOJI + " " + msg;
+            client.sendMessage(packet);
+            System.out.println("[CLIENT] 이모티콘 전송: " + packet);
+        } else if (msg.matches("^[a-z_]+$") && msg.contains("_")) {
+            // 스티커: bear_hello, duck_hi 등
+            String packet = Constants.PKG_STICKER + " " + msg;
+            client.sendMessage(packet);
+            System.out.println("[CLIENT] 스티커 전송: " + packet);
+        } else {
+            // 일반 텍스트 메시지
+            client.sendMessage(msg);
+        }
+
         addMyMessage(msg, isSecretMode);
         tfInput.setText("");
         sendTypingStatus(false);

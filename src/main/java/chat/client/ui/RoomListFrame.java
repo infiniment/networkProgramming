@@ -18,7 +18,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * RoomListFrame - 채팅방 목록 화면
- * 🔧 수정: 게임 메시지 버퍼링 + ChatFrame 참조 추가
  */
 public class RoomListFrame extends JFrame implements ChatClient.MessageListener {
 

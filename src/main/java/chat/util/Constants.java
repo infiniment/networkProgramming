@@ -44,4 +44,8 @@ public class Constants {
     // ========== 6. 서버→클라 이벤트 ==========
     public static final String EVT_SECRET_MSG = "@secret:msg";
     public static final String EVT_SECRET_CLEAR = "@secret:clear";
+
+    // ========== 7. 미디어 패킷 (이모티콘/스티커) ==========
+    public static final String PKG_EMOJI = "@PKG_EMOJI";
+    public static final String PKG_STICKER = "@PKG_STICKER";
 }

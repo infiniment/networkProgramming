@@ -1,6 +1,8 @@
 package chat.server;
 
 import chat.util.Constants;
+import chat.util.JsonEnvelope;
+
 import java.io.*;
 import java.net.Socket;
 
@@ -9,7 +11,7 @@ public class ClientHandler extends Thread {
     private final ChatServer server;
     private final RoomManager roomManager;
     private final UserDirectory users;
-    private final OmokGameManager gameManager;  // ✅ 추가
+    private final OmokGameManager gameManager;
 
     private PrintWriter out;
     private String nickname;
@@ -21,7 +23,7 @@ public class ClientHandler extends Thread {
         this.server = server;
         this.roomManager = roomManager;
         this.users = server.getUserDirectory();
-        this.gameManager = gameManager;  // ✅ 초기화
+        this.gameManager = gameManager;
     }
 
     public Room currentRoom() { return currentRoom; }
@@ -55,8 +57,13 @@ public class ClientHandler extends Thread {
 
             String line;
             while ((line = in.readLine()) != null) {
-                // 🪶 입력 로그
+                // 입력 로그
                 System.out.printf("[SERVER-LOG] [RECV] (%s): %s%n", nickname, line);
+
+                // 이모티콘/스티커 처리 우선
+                if (handleMediaPacket(line)) {
+                    continue;
+                }
 
                 if (line.startsWith("/")) {
                     if (!handleCoreCommands(line)) {
@@ -69,7 +76,7 @@ public class ClientHandler extends Thread {
                                 Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + line
                         );
                     } else {
-                        // ✅ 수정 구간 시작
+
                         if (line.startsWith("@game:")) {
                             // 🎮 게임 관련 메시지는 prefix 제거
                             System.out.printf("[SERVER-LOG] [GAME-BROADCAST] from=%s msg=%s%n", nickname, line);
@@ -79,7 +86,7 @@ public class ClientHandler extends Thread {
                             System.out.printf("[SERVER-LOG] [CHAT-BROADCAST] from=%s msg=%s%n", nickname, line);
                             currentRoom.broadcast(nickname + ": " + line);
                         }
-                        // ✅ 수정 구간 끝
+
                     }
                 }
             }
@@ -114,16 +121,67 @@ public class ClientHandler extends Thread {
             triggerGame("gomoku");
         } else if (cmd.equals(Constants.CMD_31)) {
             triggerGame("br31");
-        } else if (cmd.equals(Constants.CMD_GAME_JOIN)) {  // ✅ 추가
+        } else if (cmd.equals(Constants.CMD_GAME_JOIN)) {
             handleGameJoin(args);
-        } else if (cmd.equals(Constants.CMD_GAME_MOVE)) {  // ✅ 추가
+        } else if (cmd.equals(Constants.CMD_GAME_MOVE)) {
             handleGameMove(args);
-        } else if (cmd.equals(Constants.CMD_GAME_QUIT)) {  // ✅ 추가
+        } else if (cmd.equals(Constants.CMD_GAME_QUIT)) {
             handleGameQuit();
         } else {
             return false;
         }
         return true;
+    }
+
+    // 이모티콘 보내는 로직
+    private boolean handleMediaPacket(String line) {
+        if (line.startsWith(Constants.PKG_EMOJI + " ")) {
+            String code = line.substring((Constants.PKG_EMOJI + " ").length()).trim();
+            String res  = EmojiRegistry.findEmoji(code);
+            if (res == null) { sendMessage("[System] 알 수 없는 이모티콘: " + code); return true; }
+            if (currentRoom == null) { sendMessage("[System] 방에 입장 중이 아닙니다."); return true; }
+            if (router.isSecretMode()) {
+                String sid = router.currentSecretSid();
+                // 레거시 시크릿
+                currentRoom.broadcast(Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + code);
+                // JSON 시크릿 이모티콘 (type을 'emoji.secret'로 두거나 'secret' + status=emoji:...로 둬도 됨)
+                broadcastJsonToRoom("emoji.secret", code, /*status*/res, null, null);
+            } else {
+                // 레거시
+                currentRoom.broadcast("[EMOJI] " + nickname + " " + code);
+                // JSON (status에 이미지 경로/URL)
+                broadcastJsonToRoom("emoji", code, /*status*/res, null, null);
+            }
+            return true;
+        }
+        if (line.startsWith(Constants.PKG_STICKER + " ")) {
+            String name = line.substring((Constants.PKG_STICKER + " ").length()).trim();
+            String res  = EmojiRegistry.findSticker(name);
+            if (res == null) { sendMessage("[System] 알 수 없는 스티커: " + name); return true; }
+            if (currentRoom == null) { sendMessage("[System] 방에 입장 중이 아닙니다."); return true; }
+            if (router.isSecretMode()) {
+                String sid = router.currentSecretSid();
+                // 레거시 시크릿
+                currentRoom.broadcast(Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": [STICKER] " + name);
+                // JSON 시크릿 스티커
+                broadcastJsonToRoom("sticker.secret", name, /*status*/res, null, null);
+            } else {
+                // 레거시
+                currentRoom.broadcast("[STICKER] " + nickname + " " + name);
+                // JSON
+                broadcastJsonToRoom("sticker", name, /*status*/res, null, null);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void broadcastJsonToRoom(String type, String text, String status, String to, String ttlMs) {
+        if (currentRoom == null) return;
+        String payload = JsonEnvelope.build(
+                type, nickname, currentRoom.getName(), text, to, status, ttlMs
+        );
+        currentRoom.broadcast(payload);
     }
 
     private void triggerGame(String game) {
@@ -134,7 +192,6 @@ public class ClientHandler extends Thread {
         }
     }
 
-    // ✅ 새로운 메서드 추가
     private void handleGameJoin(String gameType) {
         System.out.println("[GAME-JOIN] " + nickname + "님이 " + gameType + " 게임 참여");
 
@@ -172,7 +229,7 @@ public class ClientHandler extends Thread {
         }
     }
 
-    private void handleGameMove(String args) {  // ✅ 새로운 메서드
+    private void handleGameMove(String args) {
         System.out.println("[GAME-MOVE] " + nickname + "님의 이동: " + args);
 
         String[] parts = args.split(" ");
@@ -200,7 +257,7 @@ public class ClientHandler extends Thread {
         }
     }
 
-    private void handleGameQuit() {  // ✅ 새로운 메서드
+    private void handleGameQuit() {
         System.out.println("[GAME-QUIT] " + nickname + "님이 게임 종료");
         gameManager.handlePlayerDisconnect(nickname);
     }
@@ -290,7 +347,7 @@ public class ClientHandler extends Thread {
             handleLeaveRoom(false);
         }
         if (nickname != null) {
-            gameManager.handlePlayerDisconnect(nickname);  // ✅ 게임 정리
+            gameManager.handlePlayerDisconnect(nickname);
         }
         roomManager.removeEverywhere(out);
         server.removeHandler(this);
@@ -300,4 +357,5 @@ public class ClientHandler extends Thread {
     public String getNickname() {
         return nickname;
     }
+
 }
