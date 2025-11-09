@@ -3,7 +3,6 @@ package chat;
 import chat.client.ui.LoginFrame;
 import chat.server.ChatServer;
 import chat.util.Constants; // Constants 사용을 위해 추가가 필요할 수 있습니다.
-
 import javax.swing.*;
 import java.io.IOException;
 import java.net.InetSocketAddress;

@@ -3,20 +3,15 @@
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
 build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 out/
-!**/src/main/**/out/
-!**/src/test/**/out/
 
 # Gradle local caches and logs
 .gradle-cache/
 .gradle-build/
-.gradle/8.*/
 .gradle/*.lock
-.gradle/**/*.bin
 .gradle/**/*.lock
 .gradle/**/*.tmp
+.gradle/**/*.bin
 
 # Local environment specific
 /local.properties
@@ -26,10 +21,6 @@ out/
 *.iws
 *.iml
 *.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-.kotlin/
 
 ### Eclipse ###
 .apt_generated
@@ -40,8 +31,6 @@ out/
 .springBeans
 .sts4-cache
 bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
 
 ### NetBeans ###
 /nbproject/private/
@@ -53,7 +42,7 @@ bin/
 ### VS Code ###
 .vscode/
 
-### Mac OS ###
+### macOS ###
 .DS_Store
 
 ### Windows ###
@@ -67,15 +56,13 @@ Desktop.ini
 *.bak
 *.swp
 
-### Compiled class files ###
+### Compiled outputs ###
 *.class
 *.jar
 *.war
 *.ear
 
 ### Others ###
-/build
-/.gradle
 /mysql-data
 node_modules/
 .env

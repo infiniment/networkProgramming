@@ -7,11 +7,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-/**
- * RoomManager - **[최종]**
- * - 방이 비어도 자동으로 삭제되지 않도록 수정 완료.
- * - 기본 방 생성 로직 제거 완료.
- */
 public class RoomManager {
 
     private final ConcurrentHashMap<String, Room> rooms = new ConcurrentHashMap<>();
