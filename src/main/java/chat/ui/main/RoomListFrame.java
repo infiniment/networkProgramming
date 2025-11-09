@@ -1,7 +1,8 @@
-package chat.client.ui;
+package chat.ui.main;
 
 import chat.client.ChatClient;
-import chat.model.RoomDto;
+import chat.shared.model.RoomDto;
+import chat.ui.chat.ChatFrame;
 import chat.util.Constants;
 
 import javax.swing.*;
@@ -391,6 +392,15 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         }
         gameMessageBuffer.clear();
 
+        // 뒤로 가기 버튼이나 X로 닫으면 항상 목록 화면이 다시 보임
+        chat.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent e) {
+                RoomListFrame.this.setVisible(true);
+                chatFrameRef = null;
+            }
+        });
+
         chat.setVisible(true);
         setVisible(false);
     }
@@ -408,26 +418,73 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
     }
 
     // ========== 메시지 수신 ==========
+//    @Override
+//    public void onMessageReceived(String line) {
+//        System.out.println("[RoomListFrame] 수신: " + line);
+//
+//        // 🔧 **2번 수정: 게임 메시지 처리 개선**
+//        if (line.startsWith("@game:")) {
+//            System.out.println("[RoomListFrame] ✅ 게임 메시지 감지: " + line);
+//            gameMessageBuffer.add(line);
+//
+//            // 🔥 **핵심: ChatFrame이 이미 열려있으면 즉시 전달!**
+//            if (chatFrameRef != null) {
+//                System.out.println("[RoomListFrame] 📤 ChatFrame 있음 - 즉시 전달");
+//                chatFrameRef.onMessageReceived(line);
+//                return;
+//            }
+//
+//            System.out.println("[RoomListFrame] 📦 ChatFrame 없음 - 버퍼에만 저장");
+//            return;
+//        }
+//
+//        if (line.startsWith(Constants.RESPONSE_ROOMS + " ")) {
+//            String json = line.substring(Constants.RESPONSE_ROOMS.length() + 1).trim();
+//            List<RoomDto> rooms = parseRooms(json);
+//            SwingUtilities.invokeLater(() -> applyRooms(rooms));
+//            return;
+//        }
+//
+//        if (line.startsWith("[System] ")) {
+//            String message = line.substring("[System] ".length()).trim();
+//
+//            if (message.startsWith("방 생성 실패: ")) {
+//                SwingUtilities.invokeLater(() -> {
+//                    JOptionPane.showMessageDialog(
+//                            RoomListFrame.this,
+//                            message,
+//                            "방 생성 실패",
+//                            JOptionPane.WARNING_MESSAGE
+//                    );
+//                });
+//            } else {
+//                System.out.println("[RoomListFrame System] " + message);
+//            }
+//            return;
+//        }
+//
+//        if (chatFrameRef != null) {
+//            chatFrameRef.onMessageReceived(line);
+//        } else {
+//            passthroughLog.add(line);
+//        }
+//    }
+
     @Override
     public void onMessageReceived(String line) {
         System.out.println("[RoomListFrame] 수신: " + line);
 
-        // 🔧 **2번 수정: 게임 메시지 처리 개선**
+        // 1) 게임 메시지는 그대로 즉시 전달(기존 로직 유지)
         if (line.startsWith("@game:")) {
-            System.out.println("[RoomListFrame] ✅ 게임 메시지 감지: " + line);
             gameMessageBuffer.add(line);
-
-            // 🔥 **핵심: ChatFrame이 이미 열려있으면 즉시 전달!**
             if (chatFrameRef != null) {
-                System.out.println("[RoomListFrame] 📤 ChatFrame 있음 - 즉시 전달");
                 chatFrameRef.onMessageReceived(line);
                 return;
             }
-
-            System.out.println("[RoomListFrame] 📦 ChatFrame 없음 - 버퍼에만 저장");
             return;
         }
 
+        // 2) 방 리스트 갱신
         if (line.startsWith(Constants.RESPONSE_ROOMS + " ")) {
             String json = line.substring(Constants.RESPONSE_ROOMS.length() + 1).trim();
             List<RoomDto> rooms = parseRooms(json);
@@ -435,26 +492,38 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             return;
         }
 
+        // 3) 시스템 메시지 로그(필요시 UI로도 보낼 수 있음)
         if (line.startsWith("[System] ")) {
             String message = line.substring("[System] ".length()).trim();
-
-            if (message.startsWith("방 생성 실패: ")) {
-                SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(
-                            RoomListFrame.this,
-                            message,
-                            "방 생성 실패",
-                            JOptionPane.WARNING_MESSAGE
-                    );
-                });
-            } else {
-                System.out.println("[RoomListFrame System] " + message);
-            }
+            System.out.println("[RoomListFrame System] " + message);
+            // 필요하면 아래 주석 해제해서 ChatFrame에도 바로 띄우기
+            // if (chatFrameRef != null) chatFrameRef.onMessageReceived(line);
             return;
         }
 
-        passthroughLog.add(line);
+        // [GAME] ← 구규격도 게임 메시지로 취급해서 ChatFrame에 바로 전달
+        if (line.startsWith("[GAME]")) {
+            if (chatFrameRef != null) chatFrameRef.onMessageReceived(line);
+            else gameMessageBuffer.add(line);
+            return;
+        }
+
+        // @game: ← 신규 규격 (기존 코드 유지)
+        if (line.startsWith("@game:")) {
+            if (chatFrameRef != null) chatFrameRef.onMessageReceived(line);
+            else gameMessageBuffer.add(line);
+            return;
+        }
+
+
+        // 4) 그 외 일반 채팅 ——> ChatFrame이 열려있으면 즉시 전달, 아니면 버퍼
+        if (chatFrameRef != null) {
+            chatFrameRef.onMessageReceived(line);
+        } else {
+            passthroughLog.add(line);
+        }
     }
+
 
     @Override
     public void onDisconnected() {

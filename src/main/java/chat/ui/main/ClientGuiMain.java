@@ -1,4 +1,4 @@
-package chat.client.ui;
+package chat.ui.main;
 
 import javax.swing.*;
 

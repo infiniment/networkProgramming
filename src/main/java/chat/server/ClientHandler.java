@@ -47,6 +47,14 @@ public class ClientHandler extends Thread {
             out = new PrintWriter(socket.getOutputStream(), true);
 
             nickname = in.readLine();
+
+            // 닉네임 검증: null/공백이면 바로 정리하고 종료
+            if (nickname == null || nickname.isBlank()) {
+                // 로그만 남기고 정리
+                System.out.println("Client connected but no nickname, closing socket: " + socket);
+                cleanup(); // nickname이 null이어도 안전하게 동작하도록 cleanup 수정 권장(아래 4번)
+                return;
+            }
             sendMessage("[System] Welcome, " + nickname + "!");
             users.register(nickname, out);
             server.registerSession(nickname, this);
@@ -186,7 +194,7 @@ public class ClientHandler extends Thread {
 
     private void triggerGame(String game) {
         if (currentRoom != null) {
-            currentRoom.broadcast("[GAME] " + game + " host=" + nickname);
+            currentRoom.broadcast("@game:menu game=" + game + " host=" + nickname);
         } else {
             sendMessage("[System] 방에 입장 중이 아닙니다.");
         }
@@ -263,20 +271,33 @@ public class ClientHandler extends Thread {
     }
 
     private void handleCreateRoom(String args) {
-        String[] parts = args.split(" ");
-        if (parts.length < 3) {
-            sendMessage("[System] " + Constants.CMD_ROOM_CREATE + " [이름] [정원] [lock|open] 형식으로 입력하세요.");
-            return;
-        }
-        String name = parts[0];
+        // 형식 1)  name cap lock|open
+        // 형식 2) "name with space" cap lock|open
+        String name;
         int capacity;
-        boolean locked = parts[2].equalsIgnoreCase("lock");
+        boolean locked;
 
-        try {
-            capacity = Integer.parseInt(parts[1]);
-        } catch (NumberFormatException e) {
-            sendMessage("[System] 정원 값은 숫자여야 합니다.");
-            return;
+        args = args.trim();
+        if (args.startsWith("\"")) {
+            // 따옴표 이름
+            int end = args.indexOf('"', 1);
+            if (end <= 0) { sendMessage("[System] 방 이름 따옴표가 올바르지 않습니다."); return; }
+            name = args.substring(1, end);
+            String rest = args.substring(end + 1).trim();
+            String[] sp = rest.split("\\s+");
+            if (sp.length < 2) { sendMessage("[System] 정원/잠금 형식 오류"); return; }
+            try { capacity = Integer.parseInt(sp[0]); } catch (Exception e) { sendMessage("[System] 정원은 숫자여야 합니다."); return; }
+            locked = sp[1].equalsIgnoreCase("lock");
+        } else {
+            // 기존 방식
+            String[] parts = args.split("\\s+");
+            if (parts.length < 3) {
+                sendMessage("[System] " + Constants.CMD_ROOM_CREATE + " [이름] [정원] [lock|open]");
+                return;
+            }
+            name = parts[0];
+            try { capacity = Integer.parseInt(parts[1]); } catch (Exception e) { sendMessage("[System] 정원은 숫자여야 합니다."); return; }
+            locked = parts[2].equalsIgnoreCase("lock");
         }
 
         if (roomManager.createRoom(name, capacity, locked)) {
@@ -285,6 +306,28 @@ public class ClientHandler extends Thread {
         } else {
             sendMessage("[System] 방 생성 실패: 이미 존재하는 방입니다.");
         }
+//        String[] parts = args.split(" ");
+//        if (parts.length < 3) {
+//            sendMessage("[System] " + Constants.CMD_ROOM_CREATE + " [이름] [정원] [lock|open] 형식으로 입력하세요.");
+//            return;
+//        }
+//        String name = parts[0];
+//        int capacity;
+//        boolean locked = parts[2].equalsIgnoreCase("lock");
+//
+//        try {
+//            capacity = Integer.parseInt(parts[1]);
+//        } catch (NumberFormatException e) {
+//            sendMessage("[System] 정원 값은 숫자여야 합니다.");
+//            return;
+//        }
+//
+//        if (roomManager.createRoom(name, capacity, locked)) {
+//            sendMessage("[System] 방 생성 성공: " + name);
+//            server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
+//        } else {
+//            sendMessage("[System] 방 생성 실패: 이미 존재하는 방입니다.");
+//        }
     }
 
     private void handleBomb(String args) {
@@ -296,18 +339,21 @@ public class ClientHandler extends Thread {
             if (sp.length >= 2) text = sp[1];
         } catch (Exception ignored) {}
         if (currentRoom != null) {
-            currentRoom.broadcast("[BOMB " + sec + "s] " + nickname + ": " + text);
+            currentRoom.broadcast(Constants.EVT_BOMB + " " + sec + " " + nickname + ": " + text);
         } else {
             sendMessage("[System] 방에 입장 중이 아닙니다.");
         }
     }
 
     private void handleJoinRoom(String roomName) {
+        // 양끝 따옴표/공백 제거
+        String rn = roomName.trim().replaceAll("^\"|\"$", "");
+
         if (currentRoom != null) {
             handleLeaveRoom(false);
         }
 
-        Room joinedRoom = roomManager.join(roomName, out);
+        Room joinedRoom = roomManager.join(roomName, this);
         if (joinedRoom != null) {
             currentRoom = joinedRoom;
             sendMessage("[System] '" + roomName + "' 방에 입장했습니다.");
@@ -323,7 +369,7 @@ public class ClientHandler extends Thread {
 
         String roomName = currentRoom.getName();
         currentRoom.broadcast(nickname + "님이 퇴장했습니다.");
-        roomManager.leave(roomName, out);
+        roomManager.leave(roomName, this);
         currentRoom = null;
 
         server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
@@ -349,7 +395,7 @@ public class ClientHandler extends Thread {
         if (nickname != null) {
             gameManager.handlePlayerDisconnect(nickname);
         }
-        roomManager.removeEverywhere(out);
+        roomManager.removeEverywhere(this);
         server.removeHandler(this);
         try { socket.close(); } catch (IOException ignored) {}
     }

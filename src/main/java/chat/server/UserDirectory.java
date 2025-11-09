@@ -1,6 +1,8 @@
 package chat.server;
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -29,36 +31,58 @@ public class UserDirectory {
     private final ConcurrentHashMap<String, PrintWriter> users = new ConcurrentHashMap<>();
 
     /**
-     * 새 사용자를 디렉토리에 등록한다.
-     * - 보통 ClientHandler에서 닉네임이 확정된 직후 호출된다.
-     *
-     * @param nickname 사용자의 닉네임
-     * @param out      해당 사용자의 출력 스트림 (서버→클라이언트 전송용)
+     * 사용자 등록 (닉네임/Writer 검증 + 중복 방지)
+     * @return true=등록 성공, false=실패(잘못된 인자/중복)
      */
-    public void register(String nickname, PrintWriter out) { users.put(nickname, out); }
+    public boolean register(String nickname, PrintWriter out) {
+        if (nickname == null || nickname.isBlank() || out == null) return false;
+        // 이미 존재하면 덮어쓰지 않음
+        return users.putIfAbsent(nickname, out) == null;
+    }
+
+    /** 사용자 제거 (닉네임 null/공백 무시) */
+    public void unregister(String nickname) {
+        if (nickname == null || nickname.isBlank()) return;
+        users.remove(nickname);
+    }
+
+    /** 닉네임으로 Writer 조회 (닉네임 null/공백이면 null) */
+    public PrintWriter get(String nickname) {
+        if (nickname == null || nickname.isBlank()) return null;
+        return users.get(nickname);
+    }
+
+    /** 닉네임 존재 여부 */
+    public boolean exists(String nickname) {
+        if (nickname == null || nickname.isBlank()) return false;
+        return users.containsKey(nickname);
+    }
+
+    /** 닉네임 사용 가능 여부(= 미등록) */
+    public boolean isAvailable(String nickname) {
+        if (nickname == null || nickname.isBlank()) return false;
+        return !users.containsKey(nickname);
+    }
 
     /**
-     * 사용자가 서버에서 나갔을 때 디렉토리에서 제거한다.
-     * - ClientHandler의 finally 블록에서 호출됨.
-     *
-     * @param nickname 퇴장한 사용자의 닉네임
+     * Writer → 닉네임 역탐색
+     * (참가자 목록 만들 때 Room의 PrintWriter를 닉으로 바꿀 때 사용)
      */
-    public void unregister(String nickname) { users.remove(nickname); }
+    public String nicknameOf(PrintWriter out) {
+        if (out == null) return null;
+        for (var e : users.entrySet()) {
+            if (e.getValue() == out) return e.getKey();
+        }
+        return null;
+    }
 
-    /**
-     * 닉네임으로 해당 사용자의 출력 스트림(PrintWriter)을 가져온다.
-     * - 귓속말(/w) 같은 기능에서 특정 사용자에게 메시지를 보낼 때 사용됨.
-     *
-     * @param nickname 찾을 닉네임
-     * @return 해당 사용자의 PrintWriter (없으면 null)
-     */
-    public PrintWriter get(String nickname) { return users.get(nickname); }
+    /** 현재 전체 닉네임 스냅샷 */
+    public List<String> allNicknames() {
+        return new ArrayList<>(users.keySet());
+    }
 
-    /**
-     * 특정 닉네임이 현재 접속 중인지 확인한다.
-     *
-     * @param nickname 확인할 닉네임
-     * @return true = 이미 접속 중, false = 존재하지 않음
-     */
-    public boolean exists(String nickname) { return users.containsKey(nickname); }
+    /** 현재 접속자 수 */
+    public int size() {
+        return users.size();
+    }
 }

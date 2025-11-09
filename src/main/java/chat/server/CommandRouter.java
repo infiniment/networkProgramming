@@ -32,21 +32,23 @@ public class CommandRouter {
             case Constants.CMD_HELP:        help(); return;
             case Constants.CMD_WHO:         who(); return;
             case Constants.CMD_SECRET:
-                ctx.sendMessage("[System] 사용법: /secrete on|off");
+                ctx.sendMessage("[System] 사용법: /secret on|off");
                 return;
             case Constants.CMD_SECRET_ON:
                 if (ctx.currentRoom() == null) { ctx.sendMessage("[System] 방에 입장 중이 아닙니다."); return; }
                 if (!secretMode) {
                     secretMode = true;
                     // 세션 고유 ID 발급(충돌 위험 극히 낮음)
-                    secretSid = Long.toUnsignedString(System.nanoTime());
+                    secretSid = java.util.UUID.randomUUID().toString();
                 }
                 ctx.sendMessage("[System] 비밀 채팅 모드 ON");
                 return;
             case Constants.CMD_SECRET_OFF:
                 if (!secretMode || secretSid == null) { ctx.sendMessage("[System] 비밀 모드가 아닙니다."); return; }
                 // OFF 순간 방 전체에 “이 sid 메시지들 지워라” 이벤트 방송
-                ctx.currentRoom().broadcast(Constants.EVT_SECRET_CLEAR + " " + secretSid);
+                if (ctx.currentRoom() != null) {
+                    ctx.currentRoom().broadcast(Constants.EVT_SECRET_CLEAR + " " + secretSid);
+                }
                 secretMode = false;
                 secretSid  = null;
                 ctx.sendMessage("[System] 비밀 채팅 모드 OFF");
@@ -96,13 +98,25 @@ public class CommandRouter {
         ctx.currentRoom().broadcast(line);
     }
 
+//    private void who() {
+//        if (ctx.currentRoom() == null) { ctx.sendMessage("[System] 방에 입장 중이 아닙니다."); return; }
+//        // Room 내부에 참가자 PrintWriter만 있어서 닉목록은 ClientHandler 쪽에서 소유/관리하는 게 깔끔하지만
+//        // 간단히 브로드캐스트로 “현재 방 인원 확인해주세요” 대신, 서버가 알 수 있는 최소 정보만 출력.
+//        ctx.sendMessage("[System] 현재 방: " + ctx.currentRoom().getName());
+//        // 필요 시 UserDirectory와 Room의 participants를 매칭해 닉 추출 구조를 확장하세요.
+//    }
+
     private void who() {
-        if (ctx.currentRoom() == null) { ctx.sendMessage("[System] 방에 입장 중이 아닙니다."); return; }
-        // Room 내부에 참가자 PrintWriter만 있어서 닉목록은 ClientHandler 쪽에서 소유/관리하는 게 깔끔하지만
-        // 간단히 브로드캐스트로 “현재 방 인원 확인해주세요” 대신, 서버가 알 수 있는 최소 정보만 출력.
+        if (ctx.currentRoom() == null) {
+            ctx.sendMessage("[System] 방에 입장 중이 아닙니다.");
+            return;
+        }
+        var nicks = ctx.currentRoom().participantNicknames(); // Java 10+ var
         ctx.sendMessage("[System] 현재 방: " + ctx.currentRoom().getName());
-        // 필요 시 UserDirectory와 Room의 participants를 매칭해 닉 추출 구조를 확장하세요.
+        ctx.sendMessage("[System] 참여자 (" + nicks.size() + "): " + String.join(", ", nicks));
     }
+
+
 
     private void whisper(String arg) {
         if (arg.isEmpty()) { ctx.sendMessage("[System] 사용법: /to [닉네임] [메시지]"); return; }
@@ -141,12 +155,17 @@ public class CommandRouter {
         String target = sp[0].replaceAll("^@", "");
         String text = sp.length > 1 ? sp[1] : "";
 
+        ClientHandler targetH = server.getSession(target);
+        if (targetH == null || targetH.currentRoom() != ctx.currentRoom()) {
+            ctx.sendMessage("[System] @" + target + " 님이 현재 방에 없습니다.");
+        }
+
         String line = "(mention @" + target + ") " + ctx.nickname() + ": " + text;
         ctx.currentRoom().broadcast(line);  // 클라에서 "(mention @닉)" 포함시 하이라이트 처리 가능
     }
 
     // 상태 노출 (필요 시 ClientHandler에서 읽어 UI/저장 등에 활용)
-    boolean isSecretMode()      { return secretMode; }
-    String  currentSecretSid()  { return secretSid; }
+    public boolean isSecretMode()      { return secretMode; }
+    public String  currentSecretSid()  { return secretSid; }
 
 }

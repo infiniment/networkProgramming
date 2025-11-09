@@ -1,4 +1,4 @@
-package chat.client.ui;
+package chat.ui.chat;
 
 import chat.client.ChatClient;
 import chat.util.Constants;
@@ -376,53 +376,53 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
             return;
         }
 
-        if (line.startsWith("@game:move")) {
-            String[] parts = line.substring("@game:move".length()).trim().split(" ");
-            if (parts.length >= 3) {
-                try {
-                    int row = Integer.parseInt(parts[0]);
-                    int col = Integer.parseInt(parts[1]);
-                    int player = Integer.parseInt(parts[2]);
-
-                    SwingUtilities.invokeLater(() -> {
-                        System.out.println("[OMOK] 돌 배치: (" + row + "," + col + ") 색상=" + player);
-
-                        // 돌 놓기
-                        gamePanel.placeStone(row, col, player);
-
-                        // 승리 체크
-                        if (gamePanel.checkWinAt(row, col, player)) {
-                            gamePanel.setGameOver(true);
-                            gamePanel.setWinnerColor(player);
-                            updateStatus();
-                            gamePanel.repaint();
-                            return;
-                        }
-
-                        // ✅ 턴 변경
-                        gamePanel.changeTurn();
-
-                        // ✅ 내 턴이면 활성화
-                        int nextTurn = gamePanel.getCurrentPlayer();
-                        boolean myTurnNow = (nextTurn == myColor);
-
-                        // 🔧 디버그 로그 추가
-                        System.out.println("[OMOK] 턴 확인: nextTurn=" + nextTurn +
-                                ", myColor=" + myColor +
-                                ", myTurnNow=" + myTurnNow);
-
-                        gamePanel.setGameEnabled(myTurnNow);
-                        gamePanel.setMyTurn(myTurnNow);
-
-                        updateStatus();
-                        gamePanel.repaint();
-                    });
-                } catch (NumberFormatException e) {
-                    System.err.println("돌 놓기 파싱 오류: " + line);
-                }
-            }
-            return;
-        }
+//        if (line.startsWith("@game:move")) {
+//            String[] parts = line.substring("@game:move".length()).trim().split(" ");
+//            if (parts.length >= 3) {
+//                try {
+//                    int row = Integer.parseInt(parts[0]);
+//                    int col = Integer.parseInt(parts[1]);
+//                    int player = Integer.parseInt(parts[2]);
+//
+//                    SwingUtilities.invokeLater(() -> {
+//                        System.out.println("[OMOK] 돌 배치: (" + row + "," + col + ") 색상=" + player);
+//
+//                        // 돌 놓기
+//                        gamePanel.placeStone(row, col, player);
+//
+//                        // 승리 체크
+//                        if (gamePanel.checkWinAt(row, col, player)) {
+//                            gamePanel.setGameOver(true);
+//                            gamePanel.setWinnerColor(player);
+//                            updateStatus();
+//                            gamePanel.repaint();
+//                            return;
+//                        }
+//
+//                        // ✅ 턴 변경
+//                        gamePanel.changeTurn();
+//
+//                        // ✅ 내 턴이면 활성화
+//                        int nextTurn = gamePanel.getCurrentPlayer();
+//                        boolean myTurnNow = (nextTurn == myColor);
+//
+//                        // 🔧 디버그 로그 추가
+//                        System.out.println("[OMOK] 턴 확인: nextTurn=" + nextTurn +
+//                                ", myColor=" + myColor +
+//                                ", myTurnNow=" + myTurnNow);
+//
+//                        gamePanel.setGameEnabled(myTurnNow);
+//                        gamePanel.setMyTurn(myTurnNow);
+//
+//                        updateStatus();
+//                        gamePanel.repaint();
+//                    });
+//                } catch (NumberFormatException e) {
+//                    System.err.println("돌 놓기 파싱 오류: " + line);
+//                }
+//            }
+//            return;
+//        }
 
         // 돌 놓기
         if (line.startsWith("@game:move")) {
