@@ -1,6 +1,6 @@
 package chat;
 
-import chat.client.ui.LoginFrame;
+import chat.ui.main.LoginFrame;
 import chat.server.ChatServer;
 import chat.util.Constants;
 

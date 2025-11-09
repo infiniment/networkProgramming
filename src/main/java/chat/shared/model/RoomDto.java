@@ -1,4 +1,4 @@
-package chat.model;
+package chat.shared.model;
 
 /**
  * 서버와 클라이언트 간에 채팅방 정보를 주고받는 DTO (Data Transfer Object)

@@ -1,4 +1,4 @@
-package chat.client.ui;
+package chat.ui.main;
 
 import chat.client.ChatClient;
 import chat.util.Constants; // <--- 1. Constants Import 추가

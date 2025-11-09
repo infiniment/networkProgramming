@@ -32,6 +32,10 @@ public class ChatServer {
             serverSocket = new ServerSocket(Constants.DEFAULT_PORT);
             while (true) {
                 Socket socket = serverSocket.accept();
+
+                // 작은 패킷도 즉시 전송
+                socket.setTcpNoDelay(true);
+
                 // ✅ OmokGameManager 전달
                 ClientHandler handler = new ClientHandler(socket, this, roomManager, gameManager);
                 handlers.add(handler);
@@ -53,31 +57,29 @@ public class ChatServer {
 
     public void stop() {
         System.out.println("Chat Server shutting down...");
-        if (serverSocket != null && !serverSocket.isClosed()) {
-            try {
-                serverSocket.close();
-            } catch (IOException ignored) {}
+        try { if (serverSocket != null) serverSocket.close(); } catch (IOException ignored) {}
+
+        for (ClientHandler h : handlers) {
+            try { h.sendMessage("[System] 서버가 종료됩니다."); } catch (Exception ignored) {}
+            try { h.interrupt(); } catch (Exception ignored) {}
         }
         roomManager.closeAll();
     }
 
     public void removeHandler(ClientHandler handler) {
         handlers.remove(handler);
-        System.out.println("Client disconnected: " + handler.getNickname());
+        String nick = (handler != null && handler.getNickname() != null) ? handler.getNickname() : "(unknown)";
+        System.out.println("Client disconnected: " + nick);
+    }
+
+    public void broadcastRoomsList() {
+        String jsonList = roomManager.listRoomsAsJson();
+        String full = Constants.RESPONSE_ROOMS + " " + jsonList;
+        for (ClientHandler h : handlers) h.sendMessage(full);
     }
 
     public void broadcastToAllClients(String command) {
-        if (command.equals(Constants.CMD_ROOMS_LIST)) {
-            String jsonList = roomManager.listRoomsAsJson();
-            String fullCommand = Constants.RESPONSE_ROOMS + " " + jsonList;
-
-            for (ClientHandler handler : handlers) {
-                handler.sendMessage(fullCommand);
-            }
-        } else {
-            for (ClientHandler handler : handlers) {
-                handler.sendMessage(command);
-            }
-        }
+        if (Constants.CMD_ROOMS_LIST.equals(command)) { broadcastRoomsList(); return; }
+        for (ClientHandler h : handlers) h.sendMessage(command);
     }
 }

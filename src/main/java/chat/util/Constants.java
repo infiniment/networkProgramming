@@ -1,7 +1,7 @@
 package chat.util;
 
 /**
- * 프로젝트 전체에서 사용되는 상수(포트, 명령어 등)를 정의합니다.
+ *~
  * 클라이언트와 서버 간의 일관된 통신 규약을 유지하는 데 사용됩니다.
  */
 public class Constants {
@@ -44,6 +44,7 @@ public class Constants {
     // ========== 6. 서버→클라 이벤트 ==========
     public static final String EVT_SECRET_MSG = "@secret:msg";
     public static final String EVT_SECRET_CLEAR = "@secret:clear";
+    public static final String EVT_BOMB         = "@bomb";
 
     // ========== 7. 미디어 패킷 (이모티콘/스티커) ==========
     public static final String PKG_EMOJI = "@PKG_EMOJI";

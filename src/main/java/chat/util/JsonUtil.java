@@ -1,6 +1,6 @@
 package chat.util;
 
-import chat.model.RoomDto;
+import chat.shared.model.RoomDto;
 import java.util.List;
 import java.util.Map;
 
@@ -68,8 +68,10 @@ public class JsonUtil {
      */
     private static String escapeJson(String value) {
         if (value == null) return "";
-        // 실제 프로젝트에서는 이스케이프 처리가 복잡하지만, 여기서는 핵심 문자만 처리합니다.
-        return value.replace("\"", "\\\"")
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\t", "\\t")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
     }
