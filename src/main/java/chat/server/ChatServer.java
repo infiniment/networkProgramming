@@ -78,8 +78,22 @@ public class ChatServer {
         for (ClientHandler h : handlers) h.sendMessage(full);
     }
 
+
     public void broadcastToAllClients(String command) {
-        if (Constants.CMD_ROOMS_LIST.equals(command)) { broadcastRoomsList(); return; }
-        for (ClientHandler h : handlers) h.sendMessage(command);
+        if (Constants.CMD_ROOMS_LIST.equals(command)) {
+            broadcastRoomsList();
+            return;
+        }
+        for (ClientHandler h : handlers) {
+            PrintWriter w = h.outWriter();
+            if (w != null) {
+                w.println(command);
+                w.flush();
+            }
+        }
     }
+//    public void broadcastToAllClients(String command) {
+//        if (Constants.CMD_ROOMS_LIST.equals(command)) { broadcastRoomsList(); return; }
+//        for (ClientHandler h : handlers) h.sendMessage(command);
+//    }
 }

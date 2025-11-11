@@ -14,8 +14,6 @@ public class CommandRouter {
     private final UserDirectory users;
     private final ChatServer server;
 
-    private boolean secretMode = false;   // 현재 시크릿 모드 상태 on/off
-    private String  secretSid  = null;    // 이번 시크릿 세션 식별자
 
     public CommandRouter(ClientHandler ctx, RoomManager roomManager, UserDirectory users, ChatServer server) {
         this.ctx = ctx;
@@ -29,30 +27,55 @@ public class CommandRouter {
 
         // 1) 빠른 매칭(정확 명령어)
         switch (command) {
-            case Constants.CMD_HELP:        help(); return;
-            case Constants.CMD_WHO:         who(); return;
-            case Constants.CMD_SECRET:
+            case chat.util.Constants.CMD_HELP:  help(); return;
+            case chat.util.Constants.CMD_WHO:   who();  return;
+
+            case chat.util.Constants.CMD_SECRET:
                 ctx.sendMessage("[System] 사용법: /secret on|off");
                 return;
-            case Constants.CMD_SECRET_ON:
+
+            case chat.util.Constants.CMD_SECRET_ON: {
                 if (ctx.currentRoom() == null) { ctx.sendMessage("[System] 방에 입장 중이 아닙니다."); return; }
-                if (!secretMode) {
-                    secretMode = true;
-                    // 세션 고유 ID 발급(충돌 위험 극히 낮음)
-                    secretSid = java.util.UUID.randomUUID().toString();
+                Room room = ctx.currentRoom();
+                if (room.isSecretActive()) {
+                    ctx.sendMessage("[System] 이미 시크릿 모드입니다.");
+                    return;
                 }
+                String sid = java.util.UUID.randomUUID().toString();
+                room.startSecret(sid);
+                room.broadcast(chat.util.Constants.EVT_SECRET_ON + " " + sid + " " + ctx.nickname());
+                room.broadcast("[System] " + ctx.nickname() + "님이 시크릿 모드를 활성화했습니다."); // ✅ 추가
                 ctx.sendMessage("[System] 비밀 채팅 모드 ON");
                 return;
-            case Constants.CMD_SECRET_OFF:
-                if (!secretMode || secretSid == null) { ctx.sendMessage("[System] 비밀 모드가 아닙니다."); return; }
-                // OFF 순간 방 전체에 “이 sid 메시지들 지워라” 이벤트 방송
-                if (ctx.currentRoom() != null) {
-                    ctx.currentRoom().broadcast(Constants.EVT_SECRET_CLEAR + " " + secretSid);
+            }
+
+            case chat.util.Constants.CMD_SECRET_OFF: {
+                if (ctx.currentRoom() == null) {
+                    ctx.sendMessage("[System] 방에 입장 중이 아닙니다.");
+                    return;
                 }
-                secretMode = false;
-                secretSid  = null;
+                Room room = ctx.currentRoom();
+                if (!room.isSecretActive()) {
+                    ctx.sendMessage("[System] 비밀 모드가 아닙니다.");
+                    return;
+                }
+
+                String sid = room.currentSecretSid();
+
+                // 1) 클라들한테 시크릿 메시지 삭제 + OFF 통지
+                room.broadcast(chat.util.Constants.EVT_SECRET_CLEAR + " " + sid);
+                room.broadcast(chat.util.Constants.EVT_SECRET_OFF   + " " + sid + " " + ctx.nickname());
+
+                // 2) 모든 참가자에게 System 메시지 (호스트만 X)
+                room.broadcast("[System] " + ctx.nickname() + "님이 시크릿 모드를 해제했습니다.");
+
+                // 3) 서버의 방 상태를 실제로 OFF 로 전환 (이거 유지!)
+                room.stopSecret();
+
+                // 4) 명령 친 사람 개인 안내
                 ctx.sendMessage("[System] 비밀 채팅 모드 OFF");
                 return;
+            }
         }
 
         // 2) 접두사/인자 기반 명령
@@ -164,8 +187,5 @@ public class CommandRouter {
         ctx.currentRoom().broadcast(line);  // 클라에서 "(mention @닉)" 포함시 하이라이트 처리 가능
     }
 
-    // 상태 노출 (필요 시 ClientHandler에서 읽어 UI/저장 등에 활용)
-    public boolean isSecretMode()      { return secretMode; }
-    public String  currentSecretSid()  { return secretSid; }
 
 }

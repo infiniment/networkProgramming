@@ -1,5 +1,6 @@
 package chat.server;
 
+import chat.shared.EmojiRegistry;
 import chat.util.Constants;
 import chat.util.JsonEnvelope;
 
@@ -78,11 +79,9 @@ public class ClientHandler extends Thread {
                         router.route(line);
                     }
                 } else if (currentRoom != null) {
-                    if (router.isSecretMode()) {
-                        String sid = router.currentSecretSid();
-                        currentRoom.broadcast(
-                                Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + line
-                        );
+                    if (currentRoom != null && currentRoom.isSecretActive()) {
+                        String sid = currentRoom.currentSecretSid();
+                        currentRoom.broadcast(Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + line);
                     } else {
 
                         if (line.startsWith("@game:")) {
@@ -142,47 +141,72 @@ public class ClientHandler extends Thread {
     }
 
     // 이모티콘 보내는 로직
+//    private boolean handleMediaPacket(String line) {
+//        boolean roomSecret = currentRoom != null && currentRoom.isSecretActive();
+//        String sid = roomSecret ? currentRoom.currentSecretSid() : null;
+//
+//        if (line.startsWith(Constants.PKG_EMOJI + " ")) {
+//            String code = line.substring((Constants.PKG_EMOJI + " ").length()).trim();
+//            String res  = EmojiRegistry.findEmoji(code);
+//            if (res == null) { sendMessage("[System] 알 수 없는 이모티콘: " + code); return true; }
+//            if (currentRoom == null) { sendMessage("[System] 방에 입장 중이 아닙니다."); return true; }
+//
+//            if (roomSecret) {
+//                currentRoom.broadcast(Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + code);
+//                broadcastJsonToRoom("emoji.secret", code, /*status*/res, null, null);
+//            } else {
+//                currentRoom.broadcast("[EMOJI] " + nickname + " " + code);
+//                broadcastJsonToRoom("emoji", code, /*status*/res, null, null);
+//            }
+//            return true;
+//        }
+//
+//
+//        return false;
+//    }
+    // ✅ 이모티콘 패킷만 처리
     private boolean handleMediaPacket(String line) {
-        if (line.startsWith(Constants.PKG_EMOJI + " ")) {
-            String code = line.substring((Constants.PKG_EMOJI + " ").length()).trim();
-            String res  = EmojiRegistry.findEmoji(code);
-            if (res == null) { sendMessage("[System] 알 수 없는 이모티콘: " + code); return true; }
-            if (currentRoom == null) { sendMessage("[System] 방에 입장 중이 아닙니다."); return true; }
-            if (router.isSecretMode()) {
-                String sid = router.currentSecretSid();
-                // 레거시 시크릿
-                currentRoom.broadcast(Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + code);
-                // JSON 시크릿 이모티콘 (type을 'emoji.secret'로 두거나 'secret' + status=emoji:...로 둬도 됨)
-                broadcastJsonToRoom("emoji.secret", code, /*status*/res, null, null);
-            } else {
-                // 레거시
-                currentRoom.broadcast("[EMOJI] " + nickname + " " + code);
-                // JSON (status에 이미지 경로/URL)
-                broadcastJsonToRoom("emoji", code, /*status*/res, null, null);
-            }
+        // 형식: "@PKG_EMOJI :doing:"
+        if (!line.startsWith(Constants.PKG_EMOJI + " ")) {
+            return false;
+        }
+
+        if (currentRoom == null) {
+            sendMessage("[System] 방에 입장 중이 아닙니다.");
             return true;
         }
-        if (line.startsWith(Constants.PKG_STICKER + " ")) {
-            String name = line.substring((Constants.PKG_STICKER + " ").length()).trim();
-            String res  = EmojiRegistry.findSticker(name);
-            if (res == null) { sendMessage("[System] 알 수 없는 스티커: " + name); return true; }
-            if (currentRoom == null) { sendMessage("[System] 방에 입장 중이 아닙니다."); return true; }
-            if (router.isSecretMode()) {
-                String sid = router.currentSecretSid();
-                // 레거시 시크릿
-                currentRoom.broadcast(Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": [STICKER] " + name);
-                // JSON 시크릿 스티커
-                broadcastJsonToRoom("sticker.secret", name, /*status*/res, null, null);
-            } else {
-                // 레거시
-                currentRoom.broadcast("[STICKER] " + nickname + " " + name);
-                // JSON
-                broadcastJsonToRoom("sticker", name, /*status*/res, null, null);
-            }
+
+        boolean roomSecret = currentRoom.isSecretActive();
+        String sid = roomSecret ? currentRoom.currentSecretSid() : null;
+
+        String code = line.substring((Constants.PKG_EMOJI + " ").length()).trim(); // ":doing:"
+        String res  = EmojiRegistry.findEmoji(code);
+
+        if (res == null) {
+            sendMessage("[System] 알 수 없는 이모티콘: " + code);
             return true;
         }
-        return false;
+
+        if (roomSecret) {
+            // 시크릿 방이면 secret 프로토콜 그대로 이용 (payload에 이모티콘 코드 넣기)
+            currentRoom.broadcast(
+                    Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " +
+                            Constants.PKG_EMOJI + " " + code
+            );
+            // 선택: JSON 알림 유지하고 싶으면 타입만 맞춰서
+            broadcastJsonToRoom("emoji.secret", code, res, null, null);
+        } else {
+            // 일반 방: 클라이언트에서 "nick: @PKG_EMOJI :doing:" 을 보고 이미지 버블로 렌더
+            currentRoom.broadcast(
+                    nickname + ": " + Constants.PKG_EMOJI + " " + code
+            );
+            // 필요하면 JSON도 함께 (UI에서 쓰면 되고, 아니라면 제거 가능)
+            broadcastJsonToRoom("emoji", code, res, null, null);
+        }
+
+        return true;
     }
+
 
     private void broadcastJsonToRoom(String type, String text, String status, String to, String ttlMs) {
         if (currentRoom == null) return;
@@ -353,7 +377,7 @@ public class ClientHandler extends Thread {
             handleLeaveRoom(false);
         }
 
-        Room joinedRoom = roomManager.join(roomName, this);
+        Room joinedRoom = roomManager.join(rn, this);
         if (joinedRoom != null) {
             currentRoom = joinedRoom;
             sendMessage("[System] '" + roomName + "' 방에 입장했습니다.");
