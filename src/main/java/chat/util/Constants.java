@@ -43,6 +43,8 @@ public class Constants {
 
     // ========== 6. 서버→클라 이벤트 ==========
     public static final String EVT_SECRET_MSG = "@secret:msg";
+    public static final String EVT_SECRET_ON    = "@secret:on";   // "@secret:on {sid} {hostNick}"
+    public static final String EVT_SECRET_OFF   = "@secret:off";  // "@secret:off {sid} {hostNick}"
     public static final String EVT_SECRET_CLEAR = "@secret:clear";
     public static final String EVT_BOMB         = "@bomb";
 

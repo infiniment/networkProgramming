@@ -56,6 +56,8 @@
 package chat.server;
 
 import chat.shared.model.RoomDto;
+
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
@@ -65,6 +67,21 @@ public class Room {
     private final String name;
     private final int capacity;
     private final boolean locked;
+
+    private volatile boolean secretActive = false;
+    private volatile String  secretSid    = null;
+
+    public synchronized void startSecret(String sid) {
+        this.secretActive = true;
+        this.secretSid = sid;
+    }
+    public synchronized void stopSecret() {
+        this.secretActive = false;
+        this.secretSid = null;
+    }
+
+    public boolean isSecretActive() { return secretActive; }
+    public String currentSecretSid() { return secretSid; }
 
     // PrintWriter 대신 ClientHandler를 직접 보관
     private final List<ClientHandler> participants = new CopyOnWriteArrayList<>();
@@ -86,9 +103,28 @@ public class Room {
     }
 
     /** 방 전체 브로드캐스트 */
+//    public void broadcast(String line) {
+//        for (ClientHandler ch : participants) {
+//            ch.sendMessage(line);
+//        }
+//    }
     public void broadcast(String line) {
+        // PrintWriter로 직접 보냄: 개행 + 즉시 flush 보장
         for (ClientHandler ch : participants) {
-            ch.sendMessage(line);
+            PrintWriter w = ch.outWriter();
+            if (w != null) {
+                w.println(line);
+                w.flush();
+            }
+        }
+    }
+
+    public void sendTo(ClientHandler ch, String line) {
+        if (ch == null) return;
+        PrintWriter w = ch.outWriter();
+        if (w != null) {
+            w.println(line);
+            w.flush();
         }
     }
 

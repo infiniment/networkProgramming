@@ -33,6 +33,8 @@ public final class UiUtils {
         }
     }
 
+
+
     /**
      * 연결 상태를 나타내는 작은 동그라미 아이콘(초록/빨강 등)
      * @param color  점 색상
@@ -52,5 +54,23 @@ public final class UiUtils {
                 g2.dispose();
             }
         };
+    }
+
+    public static void scrollToBottom(JScrollPane scroll) {
+        if (scroll == null) return;
+        Runnable r = () -> {
+            JScrollBar bar = scroll.getVerticalScrollBar();
+            if (bar != null) bar.setValue(bar.getMaximum());
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            // 바로 한 번, 그리고 레이아웃 완료 후 한 번 더
+            r.run();
+            SwingUtilities.invokeLater(r);
+        } else {
+            SwingUtilities.invokeLater(() -> {
+                r.run();
+                SwingUtilities.invokeLater(r);
+            });
+        }
     }
 }
