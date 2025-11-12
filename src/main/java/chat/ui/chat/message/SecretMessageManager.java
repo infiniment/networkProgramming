@@ -18,10 +18,15 @@ import java.util.List;
  * - 배너/버튼/말풍선 동기화
  * - sid→컴포넌트 버킷 저장해서 clear 시 정확히 제거
  */
+
 public class SecretMessageManager {
     public interface SecretUiDelegate {
         void onSecretTheme(boolean on);
     }
+
+    private final int emojiSize;
+    private static final Insets EMOJI_PAD = new Insets(10, 10, 10, 10); // 패딩 살짝 키움
+
 
     private final SecretUiDelegate uiDelegate;
     private final JPanel chatContainer;
@@ -35,12 +40,13 @@ public class SecretMessageManager {
     private final Map<String, List<JComponent>> buckets = new HashMap<>();
 
     public SecretMessageManager(JPanel chatContainer, JScrollPane chatScroll,
-                                JToggleButton btnSecret, String myNick, SecretUiDelegate uiDelegate) {
+                                JToggleButton btnSecret, String myNick, SecretUiDelegate uiDelegate, int emojiSize) {
         this.chatContainer = chatContainer;
         this.chatScroll = chatScroll;
         this.btnSecret = btnSecret;
         this.myNick = myNick;
         this.uiDelegate = uiDelegate;
+        this.emojiSize = emojiSize;
     }
 
 
@@ -174,7 +180,7 @@ public class SecretMessageManager {
                     String path = EmojiRegistry.findEmoji(code);
                     ImageIcon icon = loadEmojiIcon(path);
                     if (icon != null) {
-                        // 🔒 시크릿 이모티콘 말풍선 (점선)
+                        // 시크릿 이모티콘 말풍선 (점선)
                         panel = buildLeftEmojiBubble(user, icon, true);
                     } else {
                         // 아이콘 실패 시 텍스트로라도 표시
@@ -406,30 +412,19 @@ public class SecretMessageManager {
 
     private JPanel createSecretEmojiBubble(ImageIcon icon, boolean mine) {
         JPanel bubble = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // 시크릿은 점선 테두리
                 float[] dash = {6f, 4f};
                 g2.setColor(Colors.SECRET_ACCENT);
-                g2.setStroke(new BasicStroke(
-                        2f,
-                        BasicStroke.CAP_ROUND,
-                        BasicStroke.JOIN_ROUND,
-                        10f,
-                        dash,
-                        0f
-                ));
+                g2.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, dash, 0f));
                 g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 15, 15);
-
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
         bubble.setOpaque(false);
-        bubble.setBorder(new EmptyBorder(6, 6, 6, 6));
+        bubble.setBorder(new EmptyBorder(EMOJI_PAD));
         bubble.add(new JLabel(icon));
         return bubble;
     }
@@ -438,7 +433,8 @@ public class SecretMessageManager {
         try {
             java.net.URL url = getClass().getClassLoader().getResource(path);
             if (url == null) return null;
-            Image img = new ImageIcon(url).getImage().getScaledInstance(32, 32, Image.SCALE_SMOOTH);
+            Image img = new ImageIcon(url).getImage()
+                    .getScaledInstance(emojiSize, emojiSize, Image.SCALE_SMOOTH);
             return new ImageIcon(img);
         } catch (Exception e) {
             return null;
