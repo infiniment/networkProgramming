@@ -12,8 +12,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -52,8 +51,8 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
     // 🔧 **게임 메시지 버퍼 추가**
     private List<String> gameMessageBuffer = new CopyOnWriteArrayList<>();
 
-    // 🔧 **1번 수정: ChatFrame 참조 추가**
-    private ChatFrame chatFrameRef = null;
+    // 여러 방 한번에 열 수 있게 수정
+    private Map<String, ChatFrame> openChatFrames = new HashMap<>();
 
     public RoomListFrame(String nickname, String serverLabel) {
         this.nickname = nickname;
@@ -369,10 +368,18 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         RoomDto r = roomList.getSelectedValue();
         if (r == null || client == null) return;
 
+        // 이미 열린 방이면 앞으로 가져오기
+        if (openChatFrames.containsKey(r.name)) {
+            ChatFrame existingChat = openChatFrames.get(r.name);
+            existingChat.toFront();
+            existingChat.requestFocus();
+            return;
+        }
+
         client.sendMessage(Constants.CMD_JOIN_ROOM + " " + r.name);
 
         ChatFrame chat = new ChatFrame(nickname, serverLabel + " · " + r.name, this);
-        chatFrameRef = chat;  // 🔧 **3번 수정: 참조 저장**
+        openChatFrames.put(r.name, chat);  // Map에 저장
 
         chat.updateMemberCount(r.participants);
         chat.bind(client);
@@ -396,13 +403,11 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         chat.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosed(java.awt.event.WindowEvent e) {
-                RoomListFrame.this.setVisible(true);
-                chatFrameRef = null;
+                openChatFrames.remove(r.name);  // Map에서 제거
             }
         });
 
         chat.setVisible(true);
-        setVisible(false);
     }
 
     // ========== ChatClient 바인딩 ==========
@@ -477,9 +482,9 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         // 1) 게임 메시지는 그대로 즉시 전달(기존 로직 유지)
         if (line.startsWith("@game:")) {
             gameMessageBuffer.add(line);
-            if (chatFrameRef != null) {
-                chatFrameRef.onMessageReceived(line);
-                return;
+            // 열린 모든 ChatFrame에 전달
+            for (ChatFrame frame : openChatFrames.values()) {
+                frame.onMessageReceived(line);
             }
             return;
         }
@@ -496,30 +501,30 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         if (line.startsWith("[System] ")) {
             String message = line.substring("[System] ".length()).trim();
             System.out.println("[RoomListFrame System] " + message);
-            // 필요하면 아래 주석 해제해서 ChatFrame에도 바로 띄우기
-            // if (chatFrameRef != null) chatFrameRef.onMessageReceived(line);
+            // 열린 모든 ChatFrame에 전달
+            for (ChatFrame frame : openChatFrames.values()) {
+                frame.onMessageReceived(line);
+            }
             return;
         }
 
-        // [GAME] ← 구규격도 게임 메시지로 취급해서 ChatFrame에 바로 전달
+        // [GAME] ← 구규격
         if (line.startsWith("[GAME]")) {
-            if (chatFrameRef != null) chatFrameRef.onMessageReceived(line);
-            else gameMessageBuffer.add(line);
+            for (ChatFrame frame : openChatFrames.values()) {
+                frame.onMessageReceived(line);
+            }
+            if (openChatFrames.isEmpty()) {
+                gameMessageBuffer.add(line);
+            }
             return;
         }
 
-        // @game: ← 신규 규격 (기존 코드 유지)
-        if (line.startsWith("@game:")) {
-            if (chatFrameRef != null) chatFrameRef.onMessageReceived(line);
-            else gameMessageBuffer.add(line);
-            return;
+        // 4) 그 외 일반 채팅
+        for (ChatFrame frame : openChatFrames.values()) {
+            frame.onMessageReceived(line);
         }
 
-
-        // 4) 그 외 일반 채팅 ——> ChatFrame이 열려있으면 즉시 전달, 아니면 버퍼
-        if (chatFrameRef != null) {
-            chatFrameRef.onMessageReceived(line);
-        } else {
+        if (openChatFrames.isEmpty()) {
             passthroughLog.add(line);
         }
     }
