@@ -1,6 +1,7 @@
 package chat.ui.chat;
 
 import chat.client.ChatClient;
+import chat.ui.chat.panels.EmojiPickerPanel;
 import chat.ui.common.*;
 import chat.util.Constants;
 import chat.ui.chat.message.SecretMessageManager;
@@ -31,6 +32,10 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
 
     private final String nickname;
     private final String serverLabel;
+
+    private static final int EMOJI_CHAT_SIZE   = 96; // 채팅에 찍히는 이모티콘 크기(px)
+    private static final int EMOJI_PICKER_SIZE = 56; // 이모티콘 선택창 썸네일 크기(px)
+    private static final int BOMB_ICON_SIZE    = 28; // 폭탄 말풍선 안의 폭탄 아이콘 크기(px)
 
     private ImageIcon bombIcon;
     private ChatClient client;
@@ -119,7 +124,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
 
         // 🔤 폰트 사전 로딩(깜빡임/지연 방지)
         FontManager.preload();
-        secretMgr = new SecretMessageManager(chatContainer, chatScroll, btnSecretMode, nickname, on -> applySecretTheme(on));
+        secretMgr = new SecretMessageManager(chatContainer, chatScroll, btnSecretMode, nickname, on -> applySecretTheme(on), EMOJI_CHAT_SIZE);
     }
 
     // ========== 게임 리스너 관리 ==========
@@ -294,7 +299,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         // 이모티콘 버튼
         btnEmoticon = createIconButton("^_^");
         btnEmoticon.setToolTipText("이모티콘");
-        btnEmoticon.addActionListener(e -> toggleEmoticonPanel());
+        btnEmoticon.addActionListener(e -> openEmojiPicker());
         leftButtons.add(btnEmoticon);
 
         // 폭탄 메시지 버튼
@@ -344,10 +349,10 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         inputPanel.add(inputWrapper, BorderLayout.CENTER);
         inputPanel.add(btnSend, BorderLayout.EAST);
 
-        // 입력창 아래 이모티콘 패널 (처음엔 숨김)
-        emoticonPanel = buildEmoticonPanel();
-        emoticonPanel.setVisible(false);
-        inputPanel.add(emoticonPanel, BorderLayout.SOUTH);
+//        // 입력창 아래 이모티콘 패널 (처음엔 숨김)
+//        emoticonPanel = buildEmoticonPanel();
+//        emoticonPanel.setVisible(false);
+//        inputPanel.add(emoticonPanel, BorderLayout.SOUTH);
 
         return inputPanel;
     }
@@ -364,103 +369,73 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
     }
 
     private JPanel buildEmoticonPanel() {
-        JPanel panel = new JPanel();
+        JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-        panel.setLayout(new BorderLayout());
 
-        JPanel box = new JPanel(new GridLayout(2, 8, 8, 8)); // 필요하면 행/열 조정
-        box.setBackground(Color.WHITE);
-        box.setBorder(BorderFactory.createCompoundBorder(
+        // 탭
+        JTabbedPane tabs = new JTabbedPane(JTabbedPane.TOP);
+        tabs.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Colors.INPUT_BORDER, 1),
-                new EmptyBorder(10, 10, 10, 10)
+                new EmptyBorder(6, 6, 6, 6)
         ));
 
-        for (Map.Entry<String, String> entry : EmojiRegistry.allEmojis().entrySet()) {
-            String code = entry.getKey();      // 예: ":smile:"
-            String path = entry.getValue();    // 예: "emoji/smile.png"
+        // EmojiRegistry.categories(): Map<String, List<String>>
+        for (Map.Entry<String, java.util.List<String>> e : EmojiRegistry.categories().entrySet()) {
+            String cat = e.getKey();
+            java.util.List<String> codes = e.getValue();
 
-            ImageIcon icon = loadEmojiIcon(path);
-
-            JButton btn = new JButton() {
-                private boolean hover = false;
-                {
-                    setFocusPainted(false);
-                    setBorderPainted(false);
-                    setContentAreaFilled(false);
-                    setOpaque(false);
-                    setCursor(new Cursor(Cursor.HAND_CURSOR));
-                    addMouseListener(new MouseAdapter() {
-                        @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
-                        @Override public void mouseExited (MouseEvent e) { hover = false; repaint(); }
-                    });
-                }
-                @Override
-                protected void paintComponent(Graphics g) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    if (hover) {
-                        g2.setColor(Colors.INPUT_BG);
-                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                    }
-                    g2.dispose();
-                    super.paintComponent(g);
-                }
-            };
-
-            if (icon != null) {
-                btn.setIcon(icon);
-            } else {
-                // 이미지 못 찾으면 코드 텍스트로 표시
-                btn.setText(code);
-                btn.setFont(FontManager.get("BMDOHYEON_ttf.ttf", Font.PLAIN, 14));
-                btn.setForeground(Colors.TEXT_PRIMARY);
+            JPanel grid = new JPanel(new GridLayout(0, 6, 8, 8));
+            grid.setOpaque(false);
+            for (String code : codes) {
+                String path = EmojiRegistry.findEmoji(code);
+                if (path == null) continue;
+                JButton b = new JButton(loadEmojiIconScaled(path, 40)); // 40~48 추천
+                b.setFocusPainted(false);
+                b.setContentAreaFilled(false);
+                b.setBorderPainted(false);
+                b.setToolTipText(code);
+                b.addActionListener(ev -> {
+                    if (secretMgr != null && secretMgr.isSecretOn()) secretMgr.addMySecretEmoji(code);
+                    else addMyEmojiMessage(code);
+                    sendAsync(Constants.PKG_EMOJI + " " + code);
+                    // 선택 후 자동 닫기 원하면:
+                    emoticonPanel.setVisible(false);
+                    inputCard.revalidate(); inputCard.repaint();
+                    tfInput.requestFocusInWindow();
+                });
+                grid.add(b);
             }
-
-            // 클릭 시 바로 이모티콘 전송
-            btn.addActionListener(e -> {
-                if (client == null) return;
-
-                boolean secretOn = (secretMgr != null && secretMgr.isSecretOn());
-
-                if (secretOn) {
-                    // 시크릿 모드: 시크릿 버킷에 들어가야 함
-                    secretMgr.addMySecretEmoji(code);
-                } else {
-                    // 일반 모드
-                    addMyEmojiMessage(code);
-                }
-
-                // 서버로 패킷 전송 (시크릿/일반 모두 동일)
-                sendAsync(Constants.PKG_EMOJI + " " + code);
-
-                // 패널 닫기 + 포커스 복원
-                emoticonPanel.setVisible(false);
-                inputCard.revalidate();
-                inputCard.repaint();
-                tfInput.requestFocusInWindow();
-            });
-
-            box.add(btn);
+            JScrollPane sp = new JScrollPane(grid,
+                    ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                    ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            tabs.addTab(cat, sp);
         }
 
-        panel.add(box, BorderLayout.CENTER);
+        panel.add(tabs, BorderLayout.CENTER);
         return panel;
     }
 
-    private ImageIcon loadEmojiIcon(String path) {
-        try {
-            // EmojiRegistry에서 준 경로 그대로 사용: "emoji/xxx.png"
-            java.net.URL url = getClass().getClassLoader().getResource(path);
-            if (url == null) {
-                System.err.println("이모티콘 리소스 없음: " + path);
-                return null;
-            }
-            Image img = new ImageIcon(url).getImage().getScaledInstance(32, 32, Image.SCALE_SMOOTH);
-            return new ImageIcon(img);
-        } catch (Exception e) {
-            System.err.println("이모티콘 로드 실패: " + path + " / " + e.getMessage());
-            return null;
-        }
+    // 보조: 스케일 버전
+    private ImageIcon loadEmojiIconScaled(String path, int size) {
+        java.net.URL url = getClass().getClassLoader().getResource(path);
+        if (url == null) return null;
+        Image img = new ImageIcon(url).getImage().getScaledInstance(size, size, Image.SCALE_SMOOTH);
+        return new ImageIcon(img);
+    }
+
+
+    // 경로의 이미지를 원하는 크기로 스케일해서 가져오기
+    private ImageIcon loadIconScaled(String path, int size) {
+        java.net.URL url = getClass().getClassLoader().getResource(path);
+        if (url == null) return null;
+        Image img = new ImageIcon(url).getImage()
+                .getScaledInstance(size, size, Image.SCALE_SMOOTH);
+        return new ImageIcon(img);
+    }
+
+    // 이모티콘 전용 헬퍼
+    private ImageIcon loadEmojiIcon(String path, int size) {
+        return loadIconScaled(path, size);
     }
 
 
@@ -1316,25 +1291,29 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         if (line.startsWith(Constants.RESPONSE_ROOMS + " ") || line.startsWith("@rooms ")) return;
 
         // 폭탄 이벤트
-        if (line.startsWith(Constants.EVT_BOMB)) {
-            // 형식: "@bomb {sec} {nick}: {msg}"
-            String rest = line.substring(Constants.EVT_BOMB.length()).trim();
-            int sp = rest.indexOf(' ');
-            if (sp > 0) {
-                int sec = 5;
-                try { sec = Integer.parseInt(rest.substring(0, sp)); } catch (Exception ignored) {}
-                String payload = rest.substring(sp + 1).trim(); // "{nick}: {msg}"
-                String user = extractUsername(payload);
-                String msg  = extractMessage(payload);
-                if (user == null || msg == null) return;
+        if (line.startsWith(Constants.EVT_BOMB + " ")) {
+            // 서버 포맷: "@bomb {sec} {nick}: {msg}"
+            String payload = line.substring((Constants.EVT_BOMB + " ").length()).trim();
 
-                if (user.equals(nickname)) {
-                    // 나의 폭탄(오른쪽 말풍선)
-                    addBombMessage(msg, sec);
-                } else {
-                    // 상대 폭탄(왼쪽 말풍선) – 자동삭제 포함
-                    addOtherBombMessage(user, msg, sec);
-                }
+            // sec 추출
+            int sp = payload.indexOf(' ');
+            int sec = 5;
+            String rest = payload;
+            if (sp > 0) {
+                try { sec = Integer.parseInt(payload.substring(0, sp)); } catch (Exception ignored) {}
+                rest = payload.substring(sp + 1).trim();
+            }
+
+            // {nick}: {msg} 분리
+            String nick = extractUsername(rest);
+            String msg  = extractMessage(rest);
+            if (nick == null || msg == null) return;
+
+            // UI 갱신은 내부에서 commitChat으로 처리됨
+            if (nick.equals(this.nickname)) {
+                addBombMessage(msg, sec);            // 내 메시지(오른쪽)
+            } else {
+                addOtherBombMessage(nick, msg, sec); // 상대 메시지(왼쪽)
             }
             return;
         }
@@ -1758,16 +1737,14 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
     // 폭탄 아이콘
     private ImageIcon getBombIcon() {
         if (bombIcon != null) return bombIcon;
-
         try {
-            // 리소스 경로는 상황에 맞게 수정
             java.net.URL url = getClass().getResource("/images/bomb.png");
             if (url != null) {
-                Image img = new ImageIcon(url).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH);
+                Image img = new ImageIcon(url).getImage()
+                        .getScaledInstance(BOMB_ICON_SIZE, BOMB_ICON_SIZE, Image.SCALE_SMOOTH);
                 bombIcon = new ImageIcon(img);
             }
         } catch (Exception ignored) {}
-
         return bombIcon;
     }
 
@@ -1775,7 +1752,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
         String path = EmojiRegistry.findEmoji(code);
         if (path == null) { addMyMessage(code, false); return; }
 
-        ImageIcon icon = loadEmojiIcon(path);
+        ImageIcon icon = loadEmojiIcon(path, EMOJI_CHAT_SIZE);
         if (icon == null) { addMyMessage(code, false); return; }
 
         commitChat(() -> {
@@ -1786,34 +1763,50 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             timeLabel.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
             timeLabel.setForeground(Colors.TEXT_SECONDARY);
 
-            JPanel bubble = new JPanel() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2.setColor(Colors.MY_BUBBLE);
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-                    g2.dispose();
-                    super.paintComponent(g);
-                }
-            };
-            bubble.setOpaque(false);
-            bubble.setBorder(new EmptyBorder(6, 6, 6, 6));
-            bubble.add(new JLabel(icon));
+            // 말풍선 없이 이미지 라벨만
+            JLabel emojiLabel = new JLabel(icon);
+            // 큰 이미지라 여백도 살짝
+            emojiLabel.setBorder(new EmptyBorder(6, 6, 6, 6));
 
+            // 시간-이모지 순서는 말풍선 메시지와 동일 정렬
             messagePanel.add(timeLabel);
-            messagePanel.add(bubble);
+            messagePanel.add(emojiLabel);
 
             chatContainer.add(messagePanel);
-            chatContainer.add(Box.createVerticalStrut(8));
+            chatContainer.add(Box.createVerticalStrut(10));
         });
     }
+
+    private void openEmojiPicker() {
+        JDialog dlg = new JDialog(this, "이모티콘", false);
+        EmojiPickerPanel panel = new EmojiPickerPanel(code -> {
+            boolean secretOn = secretMgr != null && secretMgr.isSecretOn();
+
+            // 1) 로컬 즉시 렌더
+            if (secretOn) {
+                secretMgr.addMySecretEmoji(code);
+            } else {
+                addMyEmojiMessage(code);
+            }
+
+            // 2) 비동기 전송(일관성 위해 sendAsync 권장)
+            sendAsync(Constants.PKG_EMOJI + " " + code);
+
+            dlg.dispose();
+            tfInput.requestFocusInWindow();
+        }, EMOJI_PICKER_SIZE); // 썸네일 좀 더 키움(권장 44~52)
+        dlg.setContentPane(panel);
+        dlg.pack();
+        dlg.setLocationRelativeTo(this);
+        dlg.setVisible(true);
+    }
+
 
     private void addOtherEmojiMessage(String user, String code) {
         String path = EmojiRegistry.findEmoji(code);
         if (path == null) { addOtherMessage(user, code); return; }
 
-        ImageIcon icon = loadEmojiIcon(path);
+        ImageIcon icon = loadEmojiIcon(path, EMOJI_CHAT_SIZE);
         if (icon == null) { addOtherMessage(user, code); return; }
 
         commitChat(() -> {
@@ -1834,16 +1827,15 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
             row.setOpaque(false);
 
-            JPanel bubble = new JPanel();
-            bubble.setOpaque(false);
-            bubble.setBorder(new EmptyBorder(6, 6, 6, 6));
-            bubble.add(new JLabel(icon));
+            // 말풍선 제거: 이미지 라벨만
+            JLabel emojiLabel = new JLabel(icon);
+            emojiLabel.setBorder(new EmptyBorder(6, 6, 6, 6));
 
             JLabel timeLabel = new JLabel(getCurrentTime());
             timeLabel.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
             timeLabel.setForeground(Colors.TEXT_SECONDARY);
 
-            row.add(bubble);
+            row.add(emojiLabel);
             row.add(timeLabel);
 
             right.add(nameLabel);
@@ -1854,7 +1846,7 @@ public class ChatFrame extends JFrame implements ChatClient.MessageListener {
             messagePanel.add(right);
 
             chatContainer.add(messagePanel);
-            chatContainer.add(Box.createVerticalStrut(8));
+            chatContainer.add(Box.createVerticalStrut(10));
         });
     }
 
