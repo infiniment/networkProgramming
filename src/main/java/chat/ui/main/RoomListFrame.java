@@ -477,6 +477,17 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
 
     @Override
     public void onMessageReceived(String line) {
+        if (line == null) return;
+        line = line.trim();
+
+        // ✅ room 필터링: "[roomName] message" 형식 확인
+        // (RoomListFrame은 특정 방이 아니라 전체 방 목록을 보므로,
+        //  room 정보를 제거하고 계속 처리)
+        if (line.startsWith("[") && line.contains("] ")) {
+            int endBracket = line.indexOf("]");
+            line = line.substring(endBracket + 2);  // room 정보 제거
+        }
+
         System.out.println("[RoomListFrame] 수신: " + line);
 
         // 1) 게임 메시지는 그대로 즉시 전달(기존 로직 유지)

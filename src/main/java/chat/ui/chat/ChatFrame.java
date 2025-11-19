@@ -1289,6 +1289,32 @@
 
         @Override
         public void onMessageReceived(String line) {
+            if (line == null) return;
+            line = line.trim();
+
+            // ✅ 로그 추가: 받은 메시지 원본
+            System.out.println("[ChatFrame-" + nickname + "] 원본 메시지: " + line);
+
+            // ✅ room 필터링: "[roomName] message" 형식 확인
+            if (line.startsWith("[") && line.contains("] ")) {
+                int endBracket = line.indexOf("]");
+                String messageRoom = line.substring(1, endBracket);
+                String currentRoomName = serverLabel.split(" · ")[1];
+
+                // ✅ 로그 추가: room 비교
+                System.out.println("[ChatFrame-" + nickname + "] 필터링: 메시지 room=" + messageRoom +
+                        " / 현재 room=" + currentRoomName);
+
+                // 다른 방이면 무시
+                if (!messageRoom.equals(currentRoomName)) {
+                    System.out.println("[ChatFrame-" + nickname + "] ❌ 다른 방이므로 무시!");
+                    return;
+                }
+
+                // room 정보 제거
+                line = line.substring(endBracket + 2);
+                System.out.println("[ChatFrame-" + nickname + "] ✅ 자신의 방! 정제된 메시지: " + line);
+            }
             // 방 목록 응답은 채팅창에 표시하지 않음
             if (line.startsWith(Constants.RESPONSE_ROOMS + " ") || line.startsWith("@rooms ")) return;
 
@@ -1544,6 +1570,19 @@
             if (line == null) return;
             line = line.trim();
 
+            // ✅ room 필터링: "[roomName] message" 형식에서 room 확인
+            if (line.startsWith("[") && line.contains("] ")) {
+                int endBracket = line.indexOf("]");
+                String messageRoom = line.substring(1, endBracket);
+                String actualMessage = line.substring(endBracket + 2); // "] " 제거
+
+                // 다른 방 메시지면 무시
+                if (!messageRoom.equals(serverLabel.split(" · ")[1])) {
+                    return;
+                }
+
+                line = actualMessage; // room 정보 제거하고 계속 처리
+            }
             // JsonEnvelope / 이모티콘 시스템 텍스트는 전부 무시
             if (line.startsWith("{")
                     || line.startsWith("1,{")

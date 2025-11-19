@@ -109,11 +109,15 @@ public class Room {
 //        }
 //    }
     public void broadcast(String line) {
-        // PrintWriter로 직접 보냄: 개행 + 즉시 flush 보장
+        String prefixedLine = "[" + this.name + "] " + line;
+
+        // ✅ 로그 추가
+        System.out.println("[SERVER-BROADCAST] room=" + this.name + " → " + prefixedLine);
+
         for (ClientHandler ch : participants) {
             PrintWriter w = ch.outWriter();
             if (w != null) {
-                w.println(line);
+                w.println(prefixedLine);
                 w.flush();
             }
         }
@@ -121,9 +125,13 @@ public class Room {
 
     public void sendTo(ClientHandler ch, String line) {
         if (ch == null) return;
+
+        // ✅ room 정보 추가
+        String prefixedLine = "[" + this.name + "] " + line;
+
         PrintWriter w = ch.outWriter();
         if (w != null) {
-            w.println(line);
+            w.println(prefixedLine);
             w.flush();
         }
     }

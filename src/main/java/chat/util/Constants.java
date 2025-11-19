@@ -51,4 +51,21 @@ public class Constants {
     // ========== 7. 미디어 패킷 (이모티콘/스티커) ==========
     public static final String PKG_EMOJI = "@PKG_EMOJI";
     public static final String PKG_STICKER = "@PKG_STICKER";
+
+    // ========== 프로토콜 설명 (주석) ==========
+    /*
+     * [프로토콜 규칙]
+     *
+     * 서버 소켓: 1개 (포트 5959)
+     * 클라 소켓: 1개 (연결 유지)
+     *
+     * 메시지 포맷:
+     * - 일반 채팅: "nickname: message"
+     * - 제어 메시지: "@event room=roomName ..."
+     * - 모든 메시지는 서버에서 Room.broadcast()로 해당 방 모든 멤버에게 전송
+     *
+     * 클라이언트 처리:
+     * ChatFrame이 수신한 메시지는 자신의 방 이름과 비교해 표시
+     * (현재는 단일 방이므로 모든 메시지 표시)
+     */
 }
