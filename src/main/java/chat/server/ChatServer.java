@@ -10,17 +10,20 @@ public class ChatServer {
     private final Set<ClientHandler> handlers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<String, ClientHandler> sessions = new ConcurrentHashMap<>();
     private final RoomManager roomManager;
-    private final OmokGameManager gameManager;  // ✅ 추가
+    private final OmokGameManager gameManager;
+    private final BR31GameManager br31GameManager;  // ✅ 추가!
     private ServerSocket serverSocket;
     private final UserDirectory userDirectory = new UserDirectory();
 
     public ChatServer() {
         this.roomManager = new RoomManager();
-        this.gameManager = new OmokGameManager(this);  // ✅ 초기화
+        this.gameManager = new OmokGameManager(this);
+        this.br31GameManager = new BR31GameManager(this);  // ✅ 초기화!
     }
 
     public UserDirectory getUserDirectory() { return userDirectory; }
-    public OmokGameManager getGameManager() { return gameManager; }  // ✅ 게터 추가
+    public OmokGameManager getGameManager() { return gameManager; }
+    public BR31GameManager getBR31GameManager() { return br31GameManager; }  // ✅ 게터 추가!
 
     public void registerSession(String nick, ClientHandler h) { sessions.put(nick, h); }
     public void unregisterSession(String nick) { sessions.remove(nick); }
@@ -36,8 +39,8 @@ public class ChatServer {
                 // 작은 패킷도 즉시 전송
                 socket.setTcpNoDelay(true);
 
-                // ✅ OmokGameManager 전달
-                ClientHandler handler = new ClientHandler(socket, this, roomManager, gameManager);
+                // ✅ BR31GameManager도 전달!
+                ClientHandler handler = new ClientHandler(socket, this, roomManager, gameManager, br31GameManager);
                 handlers.add(handler);
                 handler.start();
                 System.out.println("New client connected: " + socket);
@@ -78,7 +81,6 @@ public class ChatServer {
         for (ClientHandler h : handlers) h.sendMessage(full);
     }
 
-
     public void broadcastToAllClients(String command) {
         if (Constants.CMD_ROOMS_LIST.equals(command)) {
             broadcastRoomsList();
@@ -92,8 +94,4 @@ public class ChatServer {
             }
         }
     }
-//    public void broadcastToAllClients(String command) {
-//        if (Constants.CMD_ROOMS_LIST.equals(command)) { broadcastRoomsList(); return; }
-//        for (ClientHandler h : handlers) h.sendMessage(command);
-//    }
 }
