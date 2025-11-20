@@ -54,6 +54,10 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
     // 여러 방 한번에 열 수 있게
     private Map<String, ChatFrame> openChatFrames = new HashMap<>();
 
+    // 🔑 비밀방 입장 대기 상태 (추가)
+    private String pendingRoomJoin = null;
+    private String pendingRoomPassword = null;
+
     public RoomListFrame(String nickname, String serverLabel) {
         this.nickname = nickname;
         this.serverLabel = serverLabel;
@@ -367,6 +371,36 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         JCheckBox ckLock = new JCheckBox("비밀방 (잠금)");
         ckLock.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 13));
 
+        // 🔑 비밀번호 입력 필드 추가
+        JLabel lblPassword = new JLabel("비밀번호 (4자리 숫자)");
+        lblPassword.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 13));
+        lblPassword.setVisible(false);  // 처음엔 숨김
+
+        JTextField tfPassword = new JTextField();  // 🔥 JTextField 사용 (숫자만 입력되도록 제한)
+        tfPassword.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
+        tfPassword.setVisible(false);  // 처음엔 숨김
+
+        // 숫자 4자리만 입력 가능하도록 제한
+        tfPassword.setDocument(new javax.swing.text.PlainDocument() {
+            @Override
+            public void insertString(int offs, String str, javax.swing.text.AttributeSet a)
+                    throws javax.swing.text.BadLocationException {
+                if (str == null) return;
+                // 숫자만 허용 & 4자리까지만
+                if ((getLength() + str.length() <= 4) && str.matches("[0-9]+")) {
+                    super.insertString(offs, str, a);
+                }
+            }
+        });
+
+        // 체크박스 상태에 따라 비밀번호 필드 표시/숨김
+        ckLock.addActionListener(e -> {
+            boolean checked = ckLock.isSelected();
+            lblPassword.setVisible(checked);
+            tfPassword.setVisible(checked);
+            tfPassword.setText("");  // 체크 해제 시 비밀번호 초기화
+        });
+
         JPanel p = new JPanel(new GridLayout(0, 1, 8, 8));
         p.setBorder(new EmptyBorder(12, 12, 12, 12));
 
@@ -380,6 +414,8 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         p.add(lblCap);
         p.add(spCap);
         p.add(ckLock);
+        p.add(lblPassword);    // 🔑 비밀번호 레이블 추가
+        p.add(tfPassword);     // 🔑 비밀번호 입력 필드 추가
 
         int ok = JOptionPane.showConfirmDialog(this, p, "새 방 만들기",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
@@ -388,9 +424,25 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             String name = tfName.getText().trim();
             int cap = (Integer) spCap.getValue();
             boolean lock = ckLock.isSelected();
+            String password = tfPassword.getText().trim();  // 🔑 비밀번호 가져오기
+
+            // 🔒 비밀방인데 비밀번호가 4자리가 아니면 경고
+            if (lock && password.length() != 4) {
+                JOptionPane.showMessageDialog(this,
+                        "비밀번호는 4자리 숫자여야 합니다.",
+                        "입력 오류",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             if (!name.isEmpty() && client != null) {
-                client.sendMessage(String.format(Constants.CMD_ROOM_CREATE + " %s %d %s",
-                        name, cap, lock ? "lock" : "open"));
+                // 🔑 비밀번호를 포함해서 서버에 전송
+                String lockStatus = lock ? "lock" : "open";
+                String cmd = lock
+                        ? String.format("%s %s %d %s %s", Constants.CMD_ROOM_CREATE, name, cap, lockStatus, password)
+                        : String.format("%s %s %d %s", Constants.CMD_ROOM_CREATE, name, cap, lockStatus);
+
+                client.sendMessage(cmd);
                 requestRooms();
             }
         }
@@ -409,7 +461,47 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             return;
         }
 
-        client.sendMessage(Constants.CMD_JOIN_ROOM + " " + r.name);
+        // 🔒 비밀방이면 비밀번호 입력 다이얼로그 표시
+        if (r.locked) {
+            String inputPassword = showPasswordDialog();
+
+            // 취소를 누른 경우
+            if (inputPassword == null) {
+                return;
+            }
+
+            // 4자리가 아니면 경고
+            if (inputPassword.length() != 4) {
+                JOptionPane.showMessageDialog(this,
+                        "비밀번호는 4자리 숫자입니다.",
+                        "입력 오류",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // 🔑 비밀번호 포함해서 입장 명령 전송 (ChatFrame은 서버 응답 후 생성)
+            client.sendMessage(Constants.CMD_JOIN_ROOM + " " + r.name + " " + inputPassword);
+
+            // 🎯 임시로 "입장 시도 중" 상태 저장 (서버 응답 대기)
+            pendingRoomJoin = r.name;
+            pendingRoomPassword = inputPassword;
+        } else {
+            // 일반 방은 바로 입장
+            client.sendMessage(Constants.CMD_JOIN_ROOM + " " + r.name);
+
+            // 일반 방은 바로 ChatFrame 생성
+            openChatFrameForRoom(r);
+        }
+    }
+
+    // 🎯 방 입장 성공 시 ChatFrame 열기
+    private void openChatFrameForRoom(RoomDto r) {
+        if (openChatFrames.containsKey(r.name)) {
+            ChatFrame existingChat = openChatFrames.get(r.name);
+            existingChat.toFront();
+            existingChat.requestFocus();
+            return;
+        }
 
         ChatFrame chat = new ChatFrame(nickname, serverLabel + " · " + r.name, this);
         openChatFrames.put(r.name, chat);
@@ -437,6 +529,46 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         });
 
         chat.setVisible(true);
+    }
+
+    // 🔑 비밀번호 입력 다이얼로그
+    private String showPasswordDialog() {
+        JPanel panel = new JPanel(new GridLayout(0, 1, 8, 8));
+        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
+
+        JLabel lblInfo = new JLabel("이 방은 비밀방입니다. 비밀번호를 입력하세요.");
+        lblInfo.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 13));
+
+        JTextField tfPassword = new JTextField();
+        tfPassword.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
+
+        // 숫자 4자리만 입력 가능하도록 제한
+        tfPassword.setDocument(new javax.swing.text.PlainDocument() {
+            @Override
+            public void insertString(int offs, String str, javax.swing.text.AttributeSet a)
+                    throws javax.swing.text.BadLocationException {
+                if (str == null) return;
+                if ((getLength() + str.length() <= 4) && str.matches("[0-9]+")) {
+                    super.insertString(offs, str, a);
+                }
+            }
+        });
+
+        panel.add(lblInfo);
+        panel.add(tfPassword);
+
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                panel,
+                "🔒 비밀방 입장",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result == JOptionPane.OK_OPTION) {
+            return tfPassword.getText().trim();
+        }
+        return null;  // 취소를 누른 경우
     }
 
     // ========== ChatClient 바인딩 ==========
@@ -474,11 +606,61 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         }
 
         // 시스템 메시지
+        // 시스템 메시지
         if (line.startsWith("[System] ")) {
             String message = line.substring("[System] ".length()).trim();
             System.out.println("[RoomListFrame System] " + message);
 
-            // 🔔 모달 알림 (EDT에서 실행)
+            // 🔒 비밀번호 오류 처리
+            if (message.contains("비밀번호가 틀렸습니다") || message.contains("비밀번호 불일치")) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(
+                            RoomListFrame.this,
+                            "비밀번호가 틀렸습니다.",
+                            "입장 실패",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                });
+
+                // 대기 상태 초기화
+                pendingRoomJoin = null;
+                pendingRoomPassword = null;
+                return;
+            }
+
+            // ✅ 방 입장 성공 메시지 처리
+            if (message.contains("입장하였습니다") && pendingRoomJoin != null) {
+                String roomName = pendingRoomJoin;
+
+                // 방 정보 찾기
+                RoomDto targetRoom = null;
+                for (int i = 0; i < model.getSize(); i++) {
+                    RoomDto r = model.getElementAt(i);
+                    if (r.name.equals(roomName)) {
+                        targetRoom = r;
+                        break;
+                    }
+                }
+
+                if (targetRoom != null) {
+                    final RoomDto finalRoom = targetRoom;
+                    SwingUtilities.invokeLater(() -> {
+                        openChatFrameForRoom(finalRoom);
+                    });
+                }
+
+                // 대기 상태 초기화
+                pendingRoomJoin = null;
+                pendingRoomPassword = null;
+
+                // 열린 모든 ChatFrame에도 전달
+                for (ChatFrame frame : openChatFrames.values()) {
+                    frame.onMessageReceived(line);
+                }
+                return;
+            }
+
+            // 🔔 기타 시스템 메시지는 모달 알림
             SwingUtilities.invokeLater(() -> {
                 int type = (message.contains("실패") || message.contains("권한") || message.contains("없습니다"))
                         ? JOptionPane.WARNING_MESSAGE
@@ -492,7 +674,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 );
             });
 
-            // 열린 모든 ChatFrame에도 그대로 전달 (채팅창에 로그 남기고 싶으면 유지)
+            // 열린 모든 ChatFrame에도 그대로 전달
             for (ChatFrame frame : openChatFrames.values()) {
                 frame.onMessageReceived(line);
             }
@@ -839,7 +1021,15 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         @Override
         public Component getListCellRendererComponent(JList<? extends RoomDto> list, RoomDto value,
                                                       int index, boolean isSelected, boolean cellHasFocus) {
-            name.setText(value.name + (value.locked ? " 🔒" : ""));
+            // 🔒 비밀방이면 이름 옆에 (비밀방) 표시 + 주황색 배경
+            name.setText(value.name + (value.locked ? " 🔒 (비밀방)" : ""));
+
+            // 🎨 비밀방이면 주황색으로 강조
+            if (value.locked) {
+                name.setForeground(PRIMARY);  // 주황색으로 표시
+            } else {
+                name.setForeground(TEXT_PRIMARY);  // 일반 색상
+            }
             sub.setText(value.toCounter());
 
             status.setText(value.active ? "● 활성" : "○ 비활성");
@@ -875,7 +1065,12 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             if (isSelected) {
                 setBackground(ACCENT_LIGHT);
             } else {
-                setBackground(index % 2 == 0 ? Color.WHITE : new Color(252, 252, 252));
+                // 🎨 비밀방이면 연한 주황색 배경
+                if (value.locked) {
+                    setBackground(new Color(255, 245, 235));  // 연한 주황색
+                } else {
+                    setBackground(index % 2 == 0 ? Color.WHITE : new Color(252, 252, 252));
+                }
             }
 
             setOpaque(true);
