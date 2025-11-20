@@ -48,10 +48,10 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
 
     private final List<String> passthroughLog = new CopyOnWriteArrayList<>();
 
-    // 🔧 **게임 메시지 버퍼 추가**
+    // 🔧 게임 메시지 버퍼
     private List<String> gameMessageBuffer = new CopyOnWriteArrayList<>();
 
-    // 여러 방 한번에 열 수 있게 수정
+    // 여러 방 한번에 열 수 있게
     private Map<String, ChatFrame> openChatFrames = new HashMap<>();
 
     public RoomListFrame(String nickname, String serverLabel) {
@@ -136,7 +136,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return content;
     }
 
-    // ========== 통계 카드 영역 ==========
+    // ========== 통계 카드 ==========
     private JComponent buildStats() {
         JPanel stats = new JPanel(new GridLayout(1, 3, 16, 0));
         stats.setOpaque(false);
@@ -213,19 +213,46 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         roomList.setSelectionForeground(TEXT_PRIMARY);
         roomList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
+        // 🔧 셀 더블클릭 시 방 입장
         roomList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int index = roomList.locationToIndex(e.getPoint());
-                if (index >= 0) {
-                    Rectangle cellBounds = roomList.getCellBounds(index, index);
-                    if (cellBounds != null && cellBounds.contains(e.getPoint())) {
-                        int relativeX = e.getX() - cellBounds.x;
-                        if (relativeX > cellBounds.width - 120) {
-                            roomList.setSelectedIndex(index);
-                            joinSelected();
-                        }
+                if (index < 0) return;
+
+                Rectangle cell = roomList.getCellBounds(index, index);
+                if (cell == null || !cell.contains(e.getPoint())) return;
+
+                int relX = e.getX() - cell.x;
+                int w = cell.width;
+
+                // 마지막 50px 정도: 삭제 버튼 영역
+                if (relX > w - 50) {
+                    RoomDto r = model.get(index);
+                    int res = JOptionPane.showConfirmDialog(
+                            RoomListFrame.this,
+                            "'" + r.name + "' 방을 삭제하시겠습니까?",
+                            "방 삭제",
+                            JOptionPane.OK_CANCEL_OPTION,
+                            JOptionPane.WARNING_MESSAGE
+                    );
+                    if (res == JOptionPane.OK_OPTION && client != null) {
+                        client.sendMessage(Constants.CMD_ROOM_DELETE + " " + r.name);
                     }
+                    return;
+                }
+
+                // 그 앞 100px 정도: 입장 버튼 영역
+                if (relX > w - 150) {
+                    roomList.setSelectedIndex(index);
+                    joinSelected();
+                    return;
+                }
+
+                // 버튼 영역이 아닌 곳 더블클릭 → 입장
+                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                    roomList.setSelectedIndex(index);
+                    joinSelected();
                 }
             }
         });
@@ -234,18 +261,24 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             @Override
             public void mouseMoved(MouseEvent e) {
                 int index = roomList.locationToIndex(e.getPoint());
-                if (index >= 0) {
-                    Rectangle cellBounds = roomList.getCellBounds(index, index);
-                    if (cellBounds != null && cellBounds.contains(e.getPoint())) {
-                        int relativeX = e.getX() - cellBounds.x;
-                        if (relativeX > cellBounds.width - 120) {
-                            roomList.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                        } else {
-                            roomList.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
-                        }
-                    }
+                if (index < 0) {
+                    roomList.setCursor(Cursor.getDefaultCursor());
+                    return;
+                }
+                Rectangle cell = roomList.getCellBounds(index, index);
+                if (cell == null || !cell.contains(e.getPoint())) {
+                    roomList.setCursor(Cursor.getDefaultCursor());
+                    return;
+                }
+
+                int relX = e.getX() - cell.x;
+                int w = cell.width;
+
+                // 입장/삭제 영역 위에 있을 땐 손가락 커서
+                if (relX > w - 150) {
+                    roomList.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 } else {
-                    roomList.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                    roomList.setCursor(Cursor.getDefaultCursor());
                 }
             }
         });
@@ -260,7 +293,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return panel;
     }
 
-    // ========== 버튼 생성 ==========
+    // ========== 상단 버튼 ==========
     private JButton createActionButton(String text, boolean isPrimary) {
         JButton btn = new JButton() {
             private boolean hover = false;
@@ -368,7 +401,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         RoomDto r = roomList.getSelectedValue();
         if (r == null || client == null) return;
 
-        // 이미 열린 방이면 앞으로 가져오기
+        // 이미 열린 방이면 앞으로
         if (openChatFrames.containsKey(r.name)) {
             ChatFrame existingChat = openChatFrames.get(r.name);
             existingChat.toFront();
@@ -379,31 +412,27 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         client.sendMessage(Constants.CMD_JOIN_ROOM + " " + r.name);
 
         ChatFrame chat = new ChatFrame(nickname, serverLabel + " · " + r.name, this);
-        openChatFrames.put(r.name, chat);  // Map에 저장
+        openChatFrames.put(r.name, chat);
 
         chat.updateMemberCount(r.participants);
         chat.bind(client);
 
-        // 일반 메시지 전달
         for (String line : passthroughLog) {
             chat.onMessageReceived(line);
         }
         passthroughLog.clear();
 
-        // 게임 메시지 전달
         System.out.println("[RoomListFrame] 📤 게임 버퍼 크기: " + gameMessageBuffer.size());
-
         for (String gameLine : gameMessageBuffer) {
             System.out.println("[RoomListFrame] 📤 ChatFrame에 전달: " + gameLine);
             chat.onMessageReceived(gameLine);
         }
         gameMessageBuffer.clear();
 
-        // 뒤로 가기 버튼이나 X로 닫으면 항상 목록 화면이 다시 보임
         chat.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosed(java.awt.event.WindowEvent e) {
-                openChatFrames.remove(r.name);  // Map에서 제거
+                openChatFrames.remove(r.name);
             }
         });
 
@@ -423,73 +452,20 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
     }
 
     // ========== 메시지 수신 ==========
-//    @Override
-//    public void onMessageReceived(String line) {
-//        System.out.println("[RoomListFrame] 수신: " + line);
-//
-//        // 🔧 **2번 수정: 게임 메시지 처리 개선**
-//        if (line.startsWith("@game:")) {
-//            System.out.println("[RoomListFrame] ✅ 게임 메시지 감지: " + line);
-//            gameMessageBuffer.add(line);
-//
-//            // 🔥 **핵심: ChatFrame이 이미 열려있으면 즉시 전달!**
-//            if (chatFrameRef != null) {
-//                System.out.println("[RoomListFrame] 📤 ChatFrame 있음 - 즉시 전달");
-//                chatFrameRef.onMessageReceived(line);
-//                return;
-//            }
-//
-//            System.out.println("[RoomListFrame] 📦 ChatFrame 없음 - 버퍼에만 저장");
-//            return;
-//        }
-//
-//        if (line.startsWith(Constants.RESPONSE_ROOMS + " ")) {
-//            String json = line.substring(Constants.RESPONSE_ROOMS.length() + 1).trim();
-//            List<RoomDto> rooms = parseRooms(json);
-//            SwingUtilities.invokeLater(() -> applyRooms(rooms));
-//            return;
-//        }
-//
-//        if (line.startsWith("[System] ")) {
-//            String message = line.substring("[System] ".length()).trim();
-//
-//            if (message.startsWith("방 생성 실패: ")) {
-//                SwingUtilities.invokeLater(() -> {
-//                    JOptionPane.showMessageDialog(
-//                            RoomListFrame.this,
-//                            message,
-//                            "방 생성 실패",
-//                            JOptionPane.WARNING_MESSAGE
-//                    );
-//                });
-//            } else {
-//                System.out.println("[RoomListFrame System] " + message);
-//            }
-//            return;
-//        }
-//
-//        if (chatFrameRef != null) {
-//            chatFrameRef.onMessageReceived(line);
-//        } else {
-//            passthroughLog.add(line);
-//        }
-//    }
-
     @Override
     public void onMessageReceived(String line) {
         System.out.println("[RoomListFrame] 수신: " + line);
 
-        // 1) 게임 메시지는 그대로 즉시 전달(기존 로직 유지)
+        // 게임 메시지
         if (line.startsWith("@game:")) {
             gameMessageBuffer.add(line);
-            // 열린 모든 ChatFrame에 전달
             for (ChatFrame frame : openChatFrames.values()) {
                 frame.onMessageReceived(line);
             }
             return;
         }
 
-        // 2) 방 리스트 갱신
+        // 방 리스트 갱신
         if (line.startsWith(Constants.RESPONSE_ROOMS + " ")) {
             String json = line.substring(Constants.RESPONSE_ROOMS.length() + 1).trim();
             List<RoomDto> rooms = parseRooms(json);
@@ -497,18 +473,33 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             return;
         }
 
-        // 3) 시스템 메시지 로그(필요시 UI로도 보낼 수 있음)
+        // 시스템 메시지
         if (line.startsWith("[System] ")) {
             String message = line.substring("[System] ".length()).trim();
             System.out.println("[RoomListFrame System] " + message);
-            // 열린 모든 ChatFrame에 전달
+
+            // 🔔 모달 알림 (EDT에서 실행)
+            SwingUtilities.invokeLater(() -> {
+                int type = (message.contains("실패") || message.contains("권한") || message.contains("없습니다"))
+                        ? JOptionPane.WARNING_MESSAGE
+                        : JOptionPane.INFORMATION_MESSAGE;
+
+                JOptionPane.showMessageDialog(
+                        RoomListFrame.this,
+                        message,
+                        "시스템 알림",
+                        type
+                );
+            });
+
+            // 열린 모든 ChatFrame에도 그대로 전달 (채팅창에 로그 남기고 싶으면 유지)
             for (ChatFrame frame : openChatFrames.values()) {
                 frame.onMessageReceived(line);
             }
             return;
         }
 
-        // [GAME] ← 구규격
+        // 구규격 게임 메시지
         if (line.startsWith("[GAME]")) {
             for (ChatFrame frame : openChatFrames.values()) {
                 frame.onMessageReceived(line);
@@ -519,7 +510,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             return;
         }
 
-        // 4) 그 외 일반 채팅
+        // 일반 채팅
         for (ChatFrame frame : openChatFrames.values()) {
             frame.onMessageReceived(line);
         }
@@ -528,7 +519,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             passthroughLog.add(line);
         }
     }
-
 
     @Override
     public void onDisconnected() {
@@ -682,6 +672,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         private final JLabel sub = new JLabel();
         private final JLabel status = new JLabel("● 활성");
         private final JButton joinBtn;
+        private final JButton deleteBtn;   // 🔥 휴지통 버튼
 
         public RoomRenderer() {
             setLayout(new BorderLayout(16, 8));
@@ -714,18 +705,15 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             status.setForeground(PRIMARY);
             status.setPreferredSize(new Dimension(50, 20));
 
-            joinBtn = createSmallButton("입장하기");
+            joinBtn   = createSmallButton("입장하기");
+            deleteBtn = createIconButton("🗑");
 
             right.add(status);
             right.add(joinBtn);
+            right.add(deleteBtn);
 
             add(left, BorderLayout.CENTER);
             add(right, BorderLayout.EAST);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
         }
 
         private JButton createSmallButton(String text) {
@@ -807,6 +795,47 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             return btn;
         }
 
+        private JButton createIconButton(String iconText) {
+            JButton btn = new JButton(iconText) {
+                private boolean hover = false;
+                private boolean pressed = false;
+
+                {
+                    setFont(new Font("Dialog", Font.PLAIN, 16));
+                    setMargin(new Insets(0, 0, 0, 0));
+                    addMouseListener(new MouseAdapter() {
+                        @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+                        @Override public void mouseExited(MouseEvent e)  { hover = false; pressed = false; repaint(); }
+                        @Override public void mousePressed(MouseEvent e) { pressed = true; repaint(); }
+                        @Override public void mouseReleased(MouseEvent e){ pressed = false; repaint(); }
+                    });
+                }
+
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                    if (pressed)      g2.setColor(new Color(230, 60, 60));
+                    else if (hover)   g2.setColor(new Color(248, 113, 113));
+                    else              g2.setColor(new Color(239, 68, 68));
+
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                    super.paintComponent(g);
+                    g2.dispose();
+                }
+            };
+
+            btn.setForeground(Color.WHITE);
+            btn.setPreferredSize(new Dimension(36, 32));
+            btn.setFocusPainted(false);
+            btn.setBorderPainted(false);
+            btn.setContentAreaFilled(false);
+            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            return btn;
+        }
+
         @Override
         public Component getListCellRendererComponent(JList<? extends RoomDto> list, RoomDto value,
                                                       int index, boolean isSelected, boolean cellHasFocus) {
@@ -816,12 +845,31 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             status.setText(value.active ? "● 활성" : "○ 비활성");
             status.setForeground(value.active ? PRIMARY : new Color(120, 130, 140));
 
+            // 입장 버튼 액션 재설정
             for (ActionListener al : joinBtn.getActionListeners()) {
                 joinBtn.removeActionListener(al);
             }
             joinBtn.addActionListener(e -> {
                 roomList.setSelectedIndex(index);
                 joinSelected();
+            });
+
+            // 삭제 버튼 액션 재설정
+            for (ActionListener al : deleteBtn.getActionListeners()) {
+                deleteBtn.removeActionListener(al);
+            }
+            deleteBtn.setToolTipText("방 삭제");
+            deleteBtn.addActionListener(e -> {
+                int res = JOptionPane.showConfirmDialog(
+                        RoomListFrame.this,
+                        "'" + value.name + "' 방을 삭제하시겠습니까?",
+                        "방 삭제",
+                        JOptionPane.OK_CANCEL_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+                if (res == JOptionPane.OK_OPTION && client != null) {
+                    client.sendMessage(Constants.CMD_ROOM_DELETE + " " + value.name);
+                }
             });
 
             if (isSelected) {
