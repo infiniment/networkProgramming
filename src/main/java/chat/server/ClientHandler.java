@@ -13,18 +13,20 @@ public class ClientHandler extends Thread {
     private final RoomManager roomManager;
     private final UserDirectory users;
     private final OmokGameManager gameManager;
+    private final BR31GameManager br31GameManager;
 
     private PrintWriter out;
     private String nickname;
     private Room currentRoom;
     private CommandRouter router;
 
-    public ClientHandler(Socket socket, ChatServer server, RoomManager roomManager, OmokGameManager gameManager) {  // ✅ 수정
+    public ClientHandler(Socket socket, ChatServer server, RoomManager roomManager, OmokGameManager gameManager, BR31GameManager br31GameManager) {  // ✅ 수정
         this.socket = socket;
         this.server = server;
         this.roomManager = roomManager;
         this.users = server.getUserDirectory();
         this.gameManager = gameManager;
+        this.br31GameManager = br31GameManager;
     }
 
     public Room currentRoom() { return currentRoom; }
@@ -227,37 +229,88 @@ public class ClientHandler extends Thread {
     private void handleGameJoin(String gameType) {
         System.out.println("[GAME-JOIN] " + nickname + "님이 " + gameType + " 게임 참여");
 
-        if (!gameType.equals("omok")) {
-            sendMessage("[System] 현재 오목(omok) 게임만 지원합니다.");
-            return;
+        String[] parts = gameType.split(" ");
+        String game = parts[0];
+
+        // ========== 오목 게임 ==========
+        if (game.equals("omok")) {
+            OmokGameManager.GameJoinResult result = gameManager.handlePlayerJoin(nickname, this);
+
+            switch (result) {
+                case WAITING:
+                    System.out.println("[GAME-JOIN] ⏳ " + nickname + "님이 호스트로 대기");
+                    sendMessage(Constants.RESPONSE_GAME_WAITING);
+                    break;
+
+                case GAME_STARTED:
+                    System.out.println("[GAME-JOIN] 🎮 게임 매칭 완료!");
+                    break;
+
+                case HOST_NOT_FOUND:
+                    System.err.println("[GAME-JOIN] ❌ 호스트 없음");
+                    sendMessage("[System] 상대방을 찾을 수 없습니다.");
+                    break;
+
+                case ALREADY_IN_GAME:
+                    System.out.println("[GAME-JOIN] ⚠️ 이미 게임 중");
+                    sendMessage("[System] 이미 게임 중입니다.");
+                    break;
+
+                case ERROR:
+                    System.err.println("[GAME-JOIN] ❌ 오류");
+                    sendMessage("[System] 게임 참여 중 오류가 발생했습니다.");
+                    break;
+            }
         }
+        // ========== BR31 게임 ==========
+        else if (game.equals("br31")) {
+            String roomId = currentRoom != null ? currentRoom.getName() : "default";
 
-        OmokGameManager.GameJoinResult result = gameManager.handlePlayerJoin(nickname, this);
+            // 호스트가 인원 설정한 경우: "br31 5"
+            if (parts.length > 1) {
+                try {
+                    int maxPlayers = Integer.parseInt(parts[1]);
+                    br31GameManager.handleHostSetup(nickname, roomId, maxPlayers);
+                } catch (NumberFormatException e) {
+                    sendMessage("[System] 잘못된 인원 수입니다.");
+                }
+            } else {
+                // 일반 참여
+                BR31GameManager.JoinResult result = br31GameManager.handlePlayerJoin(nickname, roomId, this);
 
-        switch (result) {
-            case WAITING:
-                System.out.println("[GAME-JOIN] ⏳ " + nickname + "님이 호스트로 대기");
-                sendMessage(Constants.RESPONSE_GAME_WAITING);
-                break;
+                switch (result) {
+                    case HOST_WAITING:
+                        System.out.println("[BR31-JOIN] ⏳ " + nickname + "님이 호스트로 대기");
+                        break;
 
-            case GAME_STARTED:
-                System.out.println("[GAME-JOIN] 🎮 게임 매칭 완료!");
-                break;
+                    case GUEST_JOINED:
+                        System.out.println("[BR31-JOIN] 👥 게스트 참여");
+                        break;
 
-            case HOST_NOT_FOUND:
-                System.err.println("[GAME-JOIN] ❌ 호스트 없음");
-                sendMessage("[System] 상대방을 찾을 수 없습니다.");
-                break;
+                    case GAME_STARTED:
+                        System.out.println("[BR31-JOIN] 🎮 게임 시작!");
+                        break;
 
-            case ALREADY_IN_GAME:
-                System.out.println("[GAME-JOIN] ⚠️ 이미 게임 중");
-                sendMessage("[System] 이미 게임 중입니다.");
-                break;
+                    case ALREADY_IN_GAME:
+                        System.out.println("[BR31-JOIN] ⚠️ 이미 게임 중");
+                        sendMessage("[System] 이미 게임 중입니다.");
+                        break;
 
-            case ERROR:
-                System.err.println("[GAME-JOIN] ❌ 오류");
-                sendMessage("[System] 게임 참여 중 오류가 발생했습니다.");
-                break;
+                    case ROOM_FULL:
+                        System.out.println("[BR31-JOIN] ❌ 방이 꽉 참");
+                        sendMessage("[System] 방이 꽉 찼습니다.");
+                        break;
+
+                    case ERROR:
+                        System.err.println("[BR31-JOIN] ❌ 오류");
+                        sendMessage("[System] 게임 참여 중 오류가 발생했습니다.");
+                        break;
+                }
+            }
+        }
+        // ========== 지원하지 않는 게임 ==========
+        else {
+            sendMessage("[System] 지원하지 않는 게임입니다: " + game);
         }
     }
 
@@ -265,33 +318,66 @@ public class ClientHandler extends Thread {
         System.out.println("[GAME-MOVE] " + nickname + "님의 이동: " + args);
 
         String[] parts = args.split(" ");
-        if (parts.length < 2) {
+        if (parts.length < 1) {
             System.err.println("[GAME-MOVE] 형식 오류");
             return;
         }
 
         try {
-            int row = Integer.parseInt(parts[0]);
-            int col = Integer.parseInt(parts[1]);
+            // BR31 게임인지 확인
+            BR31GameManager.BR31GameSession br31Session = br31GameManager.getSessionByPlayer(nickname);
 
-            boolean success = gameManager.recordMoveWithValidation(nickname, row, col);
+            if (br31Session != null) {
+                // ========== BR31 게임 이동 처리 ==========
+                // args 형식: "3,4,5" (선택한 숫자들)
+                String[] numberStrs = args.split(",");
+                int[] numbers = new int[numberStrs.length];
 
-            if (!success) {
-                System.err.println("[GAME-MOVE] " + nickname + "의 이동 실패");
-                sendMessage("[System] ❌ 이동이 실패했습니다.");
-                return;
+                for (int i = 0; i < numberStrs.length; i++) {
+                    numbers[i] = Integer.parseInt(numberStrs[i].trim());
+                }
+
+                boolean success = br31GameManager.handlePlayerMove(nickname, numbers);
+
+                if (!success) {
+                    System.err.println("[BR31-MOVE] " + nickname + "의 이동 실패");
+                    sendMessage("[System] ❌ 이동이 실패했습니다.");
+                }
+
+            } else {
+                // ========== 오목 게임 이동 처리 (기존 로직) ==========
+                if (parts.length < 2) {
+                    System.err.println("[GAME-MOVE] 오목 형식 오류");
+                    return;
+                }
+
+                int row = Integer.parseInt(parts[0]);
+                int col = Integer.parseInt(parts[1]);
+
+                boolean success = gameManager.recordMoveWithValidation(nickname, row, col);
+
+                if (!success) {
+                    System.err.println("[GAME-MOVE] " + nickname + "의 이동 실패");
+                    sendMessage("[System] ❌ 이동이 실패했습니다.");
+                    return;
+                }
+
+                System.out.println("[GAME-MOVE] ✅ 이동 기록됨");
             }
 
-            System.out.println("[GAME-MOVE] ✅ 이동 기록됨");
-
         } catch (NumberFormatException e) {
-            System.err.println("[GAME-MOVE] 파싱 오류");
+            System.err.println("[GAME-MOVE] 파싱 오류: " + e.getMessage());
         }
     }
 
     private void handleGameQuit() {
         System.out.println("[GAME-QUIT] " + nickname + "님이 게임 종료");
+
+        // 오목 게임 종료
         gameManager.handlePlayerDisconnect(nickname);
+
+        // BR31 게임 종료
+        br31GameManager.handlePlayerDisconnect(nickname);  // ← 이미 있음!
     }
 
     private void handleCreateRoom(String args) {
@@ -418,6 +504,7 @@ public class ClientHandler extends Thread {
         }
         if (nickname != null) {
             gameManager.handlePlayerDisconnect(nickname);
+            br31GameManager.handlePlayerDisconnect(nickname);
         }
         roomManager.removeEverywhere(this);
         server.removeHandler(this);
