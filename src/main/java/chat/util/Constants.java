@@ -40,6 +40,8 @@ public class Constants {
     public static final String RESPONSE_GAME_WAITING = "@game:waiting";
     public static final String RESPONSE_GAME_START = "@game:start";
     public static final String RESPONSE_GAME_END = "@game:end";
+    public static final String CMD_ROOM_DELETE = "/room-delete";
+    public static final String CMD_LEAVE_ROOM = "/room:leave";
 
     // ========== 6. 서버→클라 이벤트 ==========
     public static final String EVT_SECRET_MSG = "@secret:msg";

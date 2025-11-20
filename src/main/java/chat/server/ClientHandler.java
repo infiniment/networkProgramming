@@ -15,6 +15,7 @@ public class ClientHandler extends Thread {
     private final OmokGameManager gameManager;
     private final BR31GameManager br31GameManager;
 
+    private long memberId;
     private PrintWriter out;
     private String nickname;
     private Room currentRoom;
@@ -58,6 +59,11 @@ public class ClientHandler extends Thread {
                 cleanup(); // nickname이 null이어도 안전하게 동작하도록 cleanup 수정 권장(아래 4번)
                 return;
             }
+
+            // 멤버 DB 연동
+            memberId = MemberRepository.findOrCreateByName(nickname);
+            System.out.println("[LOGIN] memberId=" + memberId + ", name=" + nickname);
+
             sendMessage("[System] Welcome, " + nickname + "!");
             users.register(nickname, out);
             server.registerSession(nickname, this);
@@ -81,23 +87,39 @@ public class ClientHandler extends Thread {
                         router.route(line);
                     }
                 } else if (currentRoom != null) {
-                    if (currentRoom != null && currentRoom.isSecretActive()) {
+                    if (currentRoom.isSecretActive()) {
+                        // 시크릿 모드: DB에는 저장하지 않고 현재 참여자에게만 전송
                         String sid = currentRoom.currentSecretSid();
-                        currentRoom.broadcast(Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + line);
+                        String payload = Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + line;
+                        currentRoom.broadcast(payload);
+
+
                     } else {
 
                         if (line.startsWith("@game:")) {
-                            // 🎮 게임 관련 메시지는 prefix 제거
+                            // 🎮 게임 관련 메시지는 prefix 그대로 브로드캐스트
                             System.out.printf("[SERVER-LOG] [GAME-BROADCAST] from=%s msg=%s%n", nickname, line);
                             currentRoom.broadcast(line);
+                            // 게임 패킷은 로그 미저장 (원하면 여기서 따로 saveMessage 호출)
+
                         } else {
-                            // 💬 일반 메시지는 기존처럼 prefix 포함
+                            // 일반 메시지
                             System.out.printf("[SERVER-LOG] [CHAT-BROADCAST] from=%s msg=%s%n", nickname, line);
-                            currentRoom.broadcast(nickname + ": " + line);
+                            String payload = nickname + ": " + line;
+                            currentRoom.broadcast(payload);
+
+                            // 일반 메세지만 DB 저장
+                            ChatMessageRepository.saveMessage(
+                                    currentRoom.getName(),
+                                    nickname,
+                                    line,    // 내용만
+                                    false    // isSecret = false
+                            );
                         }
 
                     }
                 }
+
             }
 
         } catch (IOException e) {
@@ -116,9 +138,16 @@ public class ClientHandler extends Thread {
             sendRoomListUpdate();
         } else if (cmd.equals(Constants.CMD_ROOM_CREATE)) {
             handleCreateRoom(args);
+        } else if (cmd.equals(Constants.CMD_ROOM_DELETE)) {
+            handleDeleteRoom(args);
         } else if (cmd.equals(Constants.CMD_JOIN_ROOM)) {
             handleJoinRoom(args);
-        } else if (cmd.equals(Constants.CMD_QUIT)) {
+        } else if (cmd.equals(Constants.CMD_LEAVE_ROOM)) {
+            handleLeaveRoom(false); // 방만 나가기, 소켓은 유지
+            sendMessage("[System] 방에서 나왔습니다.");
+            server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
+        }
+        else if (cmd.equals(Constants.CMD_QUIT)) {
             handleQuit();
         } else if (command.startsWith(Constants.CMD_TYPING_START)) {
             if (currentRoom != null) currentRoom.broadcast(nickname + ": " + Constants.CMD_TYPING_START);
@@ -314,6 +343,7 @@ public class ClientHandler extends Thread {
         }
     }
 
+
     private void handleGameMove(String args) {
         System.out.println("[GAME-MOVE] " + nickname + "님의 이동: " + args);
 
@@ -410,8 +440,18 @@ public class ClientHandler extends Thread {
             locked = parts[2].equalsIgnoreCase("lock");
         }
 
-        if (roomManager.createRoom(name, capacity, locked)) {
+        String password = null;
+        if (locked) {
+            int code = (int)(Math.random() * 1_000_000); // 0~999999
+            password = String.format("%06d", code);      // 6자리 비밀번호
+        }
+
+        // 비번 + 방 주인 닉네임까지 넘기기
+        if (roomManager.createRoom(name, capacity, locked, password, nickname)) {
             sendMessage("[System] 방 생성 성공: " + name);
+            if (locked) {
+                sendMessage("[System] 잠금 방 비밀번호: " + password);
+            }
             server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
         } else {
             sendMessage("[System] 방 생성 실패: 이미 존재하는 방입니다.");
@@ -455,22 +495,105 @@ public class ClientHandler extends Thread {
         }
     }
 
-    private void handleJoinRoom(String roomName) {
-        // 양끝 따옴표/공백 제거
-        String rn = roomName.trim().replaceAll("^\"|\"$", "");
+//    private void handleJoinRoom(String roomName) {
+//        // 양끝 따옴표/공백 제거
+//        String rn = roomName.trim().replaceAll("^\"|\"$", "");
+//
+//        if (currentRoom != null) {
+//            handleLeaveRoom(false);
+//        }
+//
+//        Room joinedRoom = roomManager.join(rn, this);
+//        if (joinedRoom != null) {
+//            currentRoom = joinedRoom;
+//
+//            // 1) 방이 들고 있던 최근 메시지 먼저 재생
+//            for (String oldLine : joinedRoom.getHistorySnapshot()) {
+//                sendMessage(oldLine);
+//            }
+//
+//            // 2) (선택) DB 히스토리도 필요하면 그대로 남겨도 됨
+//             ChatMessageRepository.loadRecentMessages(currentRoom.getName(), 50)
+//                     .forEach(this::sendMessage);
+//
+//            // 3) 안내 + 입장 브로드캐스트
+//            sendMessage("[System] '" + rn + "' 방에 입장했습니다.");
+//            currentRoom.broadcast(nickname + "님이 입장했습니다.");
+//            server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
+//
+//        } else {
+//            sendMessage("[System] 방 입장에 실패했습니다. 정원 초과이거나 방이 존재하지 않습니다.");
+//        }
+//    }
 
-        if (currentRoom != null) {
-            handleLeaveRoom(false);
+    private void handleJoinRoom(String args) {
+        String rn = args.trim();
+        if (rn.isEmpty()) {
+            sendMessage("[System] 방 이름을 입력하세요.");
+            return;
         }
 
-        Room joinedRoom = roomManager.join(rn, this);
-        if (joinedRoom != null) {
-            currentRoom = joinedRoom;
-            sendMessage("[System] '" + roomName + "' 방에 입장했습니다.");
-            currentRoom.broadcast(nickname + "님이 입장했습니다.");
+        try {
+            if (currentRoom != null) {
+                handleLeaveRoom(false); // 기존 방에서 조용히 나가기
+            }
+
+            Room joinedRoom = roomManager.join(rn, this);
+            if (joinedRoom != null) {
+                currentRoom = joinedRoom;
+
+
+                // DB(chat_message) 기준으로만 최근 메시지 로드
+                ChatMessageRepository.loadRecentMessages(currentRoom.getName(), 50)
+                        .forEach(this::sendMessage);
+
+                // 안내 + 입장 브로드캐스트
+                sendMessage("[System] '" + rn + "' 방에 입장했습니다.");
+                currentRoom.broadcast(nickname + "님이 입장했습니다.");
+                server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
+            } else {
+                sendMessage("[System] 방 입장에 실패했습니다.");
+            }
+        } catch (Exception e) {
+            sendMessage("[System] 방 입장 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+
+
+    // 방 삭제: 방 주인만, 사람이 없을 때만 삭제 허용
+    private void handleDeleteRoom(String args) {
+        // 방 이름 파싱 (따옴표 포함 가능)
+        String roomName = args.trim().replaceAll("^\"|\"$", "");
+        if (roomName.isEmpty()) {
+            sendMessage("[System] " + Constants.CMD_ROOM_DELETE + " [방이름] 형식으로 사용하세요.");
+            return;
+        }
+
+        Room room = roomManager.getRoom(roomName);
+        if (room == null) {
+            sendMessage("[System] 존재하지 않는 방입니다: " + roomName);
+            return;
+        }
+
+        // 🔒 권한 체크: 방 주인만 삭제 가능
+        if (!nickname.equals(room.getOwnerName())) {
+            sendMessage("[System] 이 방을 삭제할 권한이 없습니다. (방 주인: " + room.getOwnerName() + ")");
+            return;
+        }
+
+        // 사람 있으면 삭제 금지 (원하면 이 조건 빼도 됨)
+        if (room.getParticipantCount() > 0) {
+            sendMessage("[System] 방 안에 사람이 있을 때는 삭제할 수 없습니다.");
+            return;
+        }
+
+        boolean ok = roomManager.deleteRoom(roomName);
+        if (ok) {
+            sendMessage("[System] 방을 삭제했습니다: " + roomName);
             server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
         } else {
-            sendMessage("[System] 방 입장에 실패했습니다. 정원 초과이거나 방이 존재하지 않습니다.");
+            sendMessage("[System] 방 삭제에 실패했습니다.");
         }
     }
 

@@ -89,7 +89,7 @@
             this.parentFrame = parentFrame;
 
             setTitle("멀티룸 채팅 - " + serverLabel);
-            setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
             setSize(900, 700);
             setLocationRelativeTo(null);
 
@@ -110,7 +110,20 @@
 
             addWindowListener(new WindowAdapter() {
                 @Override
+                public void windowClosing(WindowEvent e) {  // windowClosed → windowClosing으로 변경
+//                    // X 버튼을 누르면 뒤로가기와 동일하게 처리
+//                    shouldDisconnect = false;
+//                    if (parentFrame != null) {
+//                        parentFrame.setVisible(true);
+//                    }
+//                    dispose();
+                    // X 눌렀을 때도 방 나가기 + 목록으로
+                    leaveRoomAndBackToList();
+                }
+
+                @Override
                 public void windowClosed(WindowEvent e) {
+                    // 실제로 창이 닫힌 후 연결 종료 여부 확인
                     if (shouldDisconnect && client != null) {
                         try {
                             client.sendMessage(Constants.CMD_QUIT);
@@ -201,11 +214,12 @@
             btnBack.setContentAreaFilled(false);
             btnBack.setCursor(new Cursor(Cursor.HAND_CURSOR));
             btnBack.setOpaque(false);
-            btnBack.addActionListener(e -> {
-                shouldDisconnect = false;
-                if (parentFrame != null) parentFrame.setVisible(true);
-                dispose();
-            });
+//            btnBack.addActionListener(e -> {
+//                shouldDisconnect = false;
+//                if (parentFrame != null) parentFrame.setVisible(true);
+//                dispose();
+//            });
+            btnBack.addActionListener(e -> leaveRoomAndBackToList());
 
             JPanel roomInfo = new JPanel(new GridLayout(2, 1, 0, 2));
             roomInfo.setOpaque(false);
@@ -223,6 +237,39 @@
 
             leftPanel.add(btnBack);
             leftPanel.add(roomInfo);
+
+            JButton btnExit = new JButton("나가기") {
+                private boolean hover = false;
+                {
+                    addMouseListener(new MouseAdapter() {
+                        public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+                        public void mouseExited (MouseEvent e) { hover = false; repaint(); }
+                    });
+                }
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setColor(hover ? new Color(230, 126, 34) : new Color(243, 156, 18));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+                    g2.setFont(FontManager.get("BMDOHYEON_ttf.ttf", Font.BOLD, 11));
+                    g2.setColor(Color.WHITE);
+                    FontMetrics fm = g2.getFontMetrics();
+                    String text = "나가기";
+                    int x = (getWidth() - fm.stringWidth(text)) / 2;
+                    int y = (getHeight() + fm.getAscent()) / 2 - 2;
+                    g2.drawString(text, x, y);
+                    g2.dispose();
+                    super.paintComponent(g);
+                }
+            };
+            btnExit.setPreferredSize(new Dimension(60, 26));
+            btnExit.setFocusPainted(false);
+            btnExit.setBorderPainted(false);
+            btnExit.setContentAreaFilled(false);
+            btnExit.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            btnExit.setOpaque(false);
+            btnExit.addActionListener(e -> leaveRoomAndBackToList());
 
             // 오른쪽 - 시크릿 모드 + 미니게임 + 상태 + 닉네임
             JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
@@ -246,9 +293,12 @@
             rightPanel.add(lblStatusIcon);
             rightPanel.add(lblStatusText);
             rightPanel.add(lblUser);
+            rightPanel.add(btnExit);
 
             header.add(leftPanel, BorderLayout.WEST);
             header.add(rightPanel, BorderLayout.EAST);
+
+
 
             JPanel wrapper = new JPanel(new BorderLayout());
             wrapper.setOpaque(false);
@@ -970,6 +1020,50 @@
     //        tfInput.setText("");
     //        sendTypingStatus(false);
     //    }
+//        private void sendMessage() {
+//            String msg = tfInput.getText().trim();
+//            if (msg.isEmpty() || client == null) return;
+//
+//            // 슬래시 커맨드는 버블 만들지 않음
+//            if (msg.startsWith("/")) {
+//                sendAsync(msg);
+//                tfInput.setText("");
+//                sendTypingStatus(false);
+//                return;
+//            }
+//
+//            boolean secretOn = secretMgr != null && secretMgr.isSecretOn();
+//            boolean isEmoji = msg.matches("^:[a-z_]+:$") && EmojiRegistry.findEmoji(msg) != null;
+//
+//            String toSend = msg;
+//            // :code: 형태 + 레지스트리 존재 → 이모티콘 패킷
+//            if (isEmoji) {
+//                toSend = Constants.PKG_EMOJI + " " + msg;
+//            }
+//
+//            // === 로컬 렌더링 ===
+//            if (secretOn) {
+//                if (isEmoji) {
+//                    secretMgr.addMySecretEmoji(msg);   // 시크릿 이모지
+//                } else {
+//                    secretMgr.addMySecretEcho(msg);    // 시크릿 텍스트
+//                }
+//            } else {
+//                if (isEmoji) {
+//                    addMyEmojiMessage(msg);            // 일반 이모지
+//                } else {
+//                    addMyMessage(msg, false);          // 일반 텍스트
+//                }
+//            }
+//
+//            // 2) 전송은 백그라운드로
+//            final String payload = toSend;
+//            sendAsync(payload);
+//
+//            tfInput.setText("");
+//            sendTypingStatus(false);
+//        }
+
         private void sendMessage() {
             String msg = tfInput.getText().trim();
             if (msg.isEmpty() || client == null) return;
@@ -992,17 +1086,12 @@
             }
 
             // === 로컬 렌더링 ===
+            // 시크릿 모드일 때만 로컬에서 바로 그리기
             if (secretOn) {
                 if (isEmoji) {
                     secretMgr.addMySecretEmoji(msg);   // 시크릿 이모지
                 } else {
                     secretMgr.addMySecretEcho(msg);    // 시크릿 텍스트
-                }
-            } else {
-                if (isEmoji) {
-                    addMyEmojiMessage(msg);            // 일반 이모지
-                } else {
-                    addMyMessage(msg, false);          // 일반 텍스트
                 }
             }
 
@@ -1279,7 +1368,13 @@
         public void bind(ChatClient client) {
             this.client = client;
             this.client.startReceiving(this);
-            tfInput.requestFocus();
+            SwingUtilities.invokeLater(() -> {
+                lblStatusIcon.setIcon(UiUtils.makeStatusIcon(Colors.PRIMARY));
+                lblStatusText.setText("연결");
+                btnSend.setEnabled(true);
+                tfInput.setEnabled(true);
+                tfInput.requestFocusInWindow();
+            });
         }
 
         public void addBufferedLines(List<String> lines) {
@@ -1543,44 +1638,29 @@
         private void parseAndDisplayMessage(String line) {
             if (line == null) return;
             line = line.trim();
+            if (line.isEmpty()) return;
 
-            // JsonEnvelope / 이모티콘 시스템 텍스트는 전부 무시
+            // 0) 이모티콘 JSON / 스티커 JSON / 패키지 헤더 등은 전부 무시
             if (line.startsWith("{")
                     || line.startsWith("1,{")
                     || line.startsWith("1,\"")
                     || line.contains("\"type\":\"emoji\"")
                     || line.contains("\"type\":\"sticker\"")
-                    || line.startsWith(Constants.PKG_EMOJI)      // "@PKG_EMOJI ..."
-                    || line.startsWith(Constants.PKG_STICKER)   // "@PKG_STICKER ..."
+                    || line.startsWith(Constants.PKG_EMOJI)    // "@PKG_EMOJI ..."
+                    || line.startsWith(Constants.PKG_STICKER)  // "@PKG_STICKER ..."
                     || line.startsWith("[EMOJI]")
                     || line.startsWith("[STICKER]")) {
                 return;
             }
 
-
-            // ==== 이모티콘/스티커 JSON 패킷은 여기서 바로 무시 ====
-            // 예: 1,"type":"emoji", ...  혹은 {"type":"emoji", ...}
-            if (line.startsWith("{")
-                    || line.startsWith("1,{")
-                    || line.contains("\"type\":\"emoji\"")
-                    || line.contains("\"type\":\"sticker\"")) {
-                // 이미 JsonEnvelope 쪽에서 처리되므로 채팅 버블로 또 찍지 않음
-                return;
-            }
-
-            // 1) 내 닉네임으로 시작하는 에코는 무시 (이미 로컬에서 렌더함)
-            if (line.startsWith(nickname + ":")) {
-                return;
-            }
-
-            // 2) 시스템 메시지 형식
+            // 1) 시스템 메시지
             if (line.startsWith("[System] ")) {
                 String message = line.substring("[System] ".length()).trim();
                 addSystemMessage(message);
                 return;
             }
 
-            // 3) 타이핑 상태
+            // 2) 타이핑 상태
             if (line.contains(Constants.CMD_TYPING_START) || line.contains(Constants.CMD_TYPING_STOP)) {
                 String status = line.contains(Constants.CMD_TYPING_START)
                         ? Constants.CMD_TYPING_START
@@ -1595,31 +1675,40 @@
                 return;
             }
 
-            // 4) 이모티콘 패킷 (형식: "nick: @PKG_EMOJI :code:")
-            int idx = line.indexOf(":");
-            if (idx > 0) {
-                String user = line.substring(0, idx).trim();
-                String payload = line.substring(idx + 1).trim(); // "@PKG_EMOJI :doing:" or "일반메시지"
+            // 3) "닉네임: 내용" 구조 아닌 건 그냥 시스템성 문장으로 처리
+            int idx = line.indexOf(':');
+            if (idx <= 0) {
+                addSystemMessage(line);
+                return;
+            }
 
-                // (위에서 내 에코는 이미 걸러서 여기선 user != nickname)
+            String user = line.substring(0, idx).trim();
+            String payload = line.substring(idx + 1).trim(); // 내용 부분
 
-                if (payload.startsWith(Constants.PKG_EMOJI)) {
-                    String code = payload.substring(Constants.PKG_EMOJI.length()).trim(); // ":doing:"
+            // 4) 이모티콘 메시지 (형식: "nick: @PKG_EMOJI :code:")
+            if (payload.startsWith(Constants.PKG_EMOJI)) {
+                String code = payload.substring(Constants.PKG_EMOJI.length()).trim(); // ":doing:" 같은 코드
+
+                if (user.equals(nickname)) {
+                    // 내 이모티콘
+                    addMyEmojiMessage(code);
+                } else {
+                    // 다른 사람 이모티콘
                     addOtherEmojiMessage(user, code);
-                    return;
-                }
-
-                // 5) 일반 텍스트 메시지
-                String message = payload;
-                if (!message.isEmpty()) {
-                    addOtherMessage(user, message);
                 }
                 return;
             }
 
-            // 6) 여기까지 왔는데 ":"도 없고, secret 이벤트도 아니면 시스템성 텍스트로 처리
-            if (!line.startsWith(Constants.EVT_SECRET_MSG)) {
-                addSystemMessage(line);
+            // 5) 일반 텍스트 메시지
+            if (payload.isEmpty()) {
+                return;
+            }
+
+            if (user.equals(nickname)) {
+                // 여기서 과거에 내가 보낸 메시지도 다시 그려줌
+                addMyMessage(payload, false);
+            } else {
+                addOtherMessage(user, payload);
             }
         }
 
@@ -1779,6 +1868,27 @@
             });
         }
 
+        private void leaveRoomAndBackToList() {
+            // 이 창을 닫을 때는 "연결 끊지 않는다" 플래그
+            shouldDisconnect = false;
+
+            // 1) 서버에 방 나가기 명령
+            if (client != null) {
+                sendAsync(Constants.CMD_LEAVE_ROOM);
+            }
+
+            // 2) 방 목록 창 다시 보여주기 + 활성화
+            if (parentFrame != null) {
+                parentFrame.setVisible(true);
+                parentFrame.setEnabled(true);        // 혹시 입장할 때 disable 해놨다면 다시 활성화
+                parentFrame.toFront();
+                parentFrame.requestFocus();
+            }
+
+            // 3) 현재 채팅 창 닫기
+            dispose();
+        }
+
         private void openEmojiPicker() {
             JDialog dlg = new JDialog(this, "이모티콘", false);
             EmojiPickerPanel panel = new EmojiPickerPanel(code -> {
@@ -1787,8 +1897,6 @@
                 // 1) 로컬 즉시 렌더
                 if (secretOn) {
                     secretMgr.addMySecretEmoji(code);
-                } else {
-                    addMyEmojiMessage(code);
                 }
 
                 // 2) 비동기 전송(일관성 위해 sendAsync 권장)
