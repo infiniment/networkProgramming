@@ -411,51 +411,86 @@ public class ClientHandler extends Thread {
     }
 
     private void handleCreateRoom(String args) {
-        // 형식 1)  name cap lock|open
-        // 형식 2) "name with space" cap lock|open
+        // 형식: name cap lock|open [password]
         String name;
         int capacity;
         boolean locked;
+        String password = null;
 
         args = args.trim();
+
+        // 🔥 따옴표로 시작하는 이름 처리
         if (args.startsWith("\"")) {
-            // 따옴표 이름
             int end = args.indexOf('"', 1);
-            if (end <= 0) { sendMessage("[System] 방 이름 따옴표가 올바르지 않습니다."); return; }
+            if (end <= 0) {
+                sendMessage("[System] 방 이름 따옴표가 올바르지 않습니다.");
+                return;
+            }
             name = args.substring(1, end);
             String rest = args.substring(end + 1).trim();
             String[] sp = rest.split("\\s+");
-            if (sp.length < 2) { sendMessage("[System] 정원/잠금 형식 오류"); return; }
-            try { capacity = Integer.parseInt(sp[0]); } catch (Exception e) { sendMessage("[System] 정원은 숫자여야 합니다."); return; }
-            locked = sp[1].equalsIgnoreCase("lock");
-        } else {
-            // 기존 방식
-            String[] parts = args.split("\\s+");
-            if (parts.length < 3) {
-                sendMessage("[System] " + Constants.CMD_ROOM_CREATE + " [이름] [정원] [lock|open]");
+
+            if (sp.length < 2) {
+                sendMessage("[System] 정원/잠금 형식 오류");
                 return;
             }
+
+            try {
+                capacity = Integer.parseInt(sp[0]);
+            } catch (Exception e) {
+                sendMessage("[System] 정원은 숫자여야 합니다.");
+                return;
+            }
+
+            locked = sp[1].equalsIgnoreCase("lock");
+
+            // 🔑 비밀번호 파싱 (잠금 방일 때만)
+            if (locked && sp.length >= 3) {
+                password = sp[2];
+            }
+
+        } else {
+            // 🔥 일반 이름 (공백 없음)
+            String[] parts = args.split("\\s+");
+            if (parts.length < 3) {
+                sendMessage("[System] " + Constants.CMD_ROOM_CREATE + " [이름] [정원] [lock|open] [비밀번호(선택)]");
+                return;
+            }
+
             name = parts[0];
-            try { capacity = Integer.parseInt(parts[1]); } catch (Exception e) { sendMessage("[System] 정원은 숫자여야 합니다."); return; }
+
+            try {
+                capacity = Integer.parseInt(parts[1]);
+            } catch (Exception e) {
+                sendMessage("[System] 정원은 숫자여야 합니다.");
+                return;
+            }
+
             locked = parts[2].equalsIgnoreCase("lock");
+
+            // 🔑 비밀번호 파싱 (잠금 방일 때만)
+            if (locked && parts.length >= 4) {
+                password = parts[3];
+            }
         }
 
-        String password = null;
-        if (locked) {
-            int code = (int)(Math.random() * 1_000_000); // 0~999999
-            password = String.format("%06d", code);      // 6자리 비밀번호
+        // 🔒 비밀방인데 비밀번호가 없으면 에러
+        if (locked && (password == null || password.isEmpty())) {
+            sendMessage("[System] 잠금 방은 비밀번호가 필요합니다.");
+            return;
         }
 
-        // 비번 + 방 주인 닉네임까지 넘기기
+        // 비밀번호 + 방 주인 닉네임까지 넘기기
         if (roomManager.createRoom(name, capacity, locked, password, nickname)) {
             sendMessage("[System] 방 생성 성공: " + name);
             if (locked) {
-                sendMessage("[System] 잠금 방 비밀번호: " + password);
+                sendMessage("[System] 잠금 방 비밀번호: " + password);  // 클라이언트가 보낸 비밀번호 확인용
             }
             server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
         } else {
             sendMessage("[System] 방 생성 실패: 이미 존재하는 방입니다.");
         }
+    }
 //        String[] parts = args.split(" ");
 //        if (parts.length < 3) {
 //            sendMessage("[System] " + Constants.CMD_ROOM_CREATE + " [이름] [정원] [lock|open] 형식으로 입력하세요.");
@@ -478,7 +513,6 @@ public class ClientHandler extends Thread {
 //        } else {
 //            sendMessage("[System] 방 생성 실패: 이미 존재하는 방입니다.");
 //        }
-    }
 
     private void handleBomb(String args) {
         String[] sp = args.split("\\s+", 2);
@@ -527,28 +561,52 @@ public class ClientHandler extends Thread {
 //    }
 
     private void handleJoinRoom(String args) {
-        String rn = args.trim();
-        if (rn.isEmpty()) {
+        // 형식: roomName [password]
+        String[] parts = args.trim().split("\\s+", 2);
+        String roomName = parts[0];
+        String password = parts.length > 1 ? parts[1] : null;
+
+        if (roomName.isEmpty()) {
             sendMessage("[System] 방 이름을 입력하세요.");
             return;
         }
 
         try {
             if (currentRoom != null) {
-                handleLeaveRoom(false); // 기존 방에서 조용히 나가기
+                handleLeaveRoom(false);
             }
 
-            Room joinedRoom = roomManager.join(rn, this);
+            // 🔒 비밀방 체크
+            Room targetRoom = roomManager.getRoom(roomName);
+            if (targetRoom == null) {
+                sendMessage("[System] 존재하지 않는 방입니다.");
+                return;
+            }
+
+            // 🔑 비밀번호 검증
+            if (targetRoom.isLocked()) {
+                if (password == null || password.isEmpty()) {
+                    sendMessage("[System] 이 방은 비밀번호가 필요합니다.");
+                    return;
+                }
+
+                if (!targetRoom.matchPassword(password)) {
+                    sendMessage("[System] 비밀번호가 틀렸습니다.");
+                    return;
+                }
+            }
+
+            // ✅ 입장 처리
+            Room joinedRoom = roomManager.join(roomName, this);
             if (joinedRoom != null) {
                 currentRoom = joinedRoom;
 
-
-                // DB(chat_message) 기준으로만 최근 메시지 로드
+                // DB 메시지 로드
                 ChatMessageRepository.loadRecentMessages(currentRoom.getName(), 50)
                         .forEach(this::sendMessage);
 
-                // 안내 + 입장 브로드캐스트
-                sendMessage("[System] '" + rn + "' 방에 입장했습니다.");
+                // 안내 + 브로드캐스트
+                sendMessage("[System] " + nickname + "님이 " + roomName + "에 입장하였습니다.");
                 currentRoom.broadcast(nickname + "님이 입장했습니다.");
                 server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
             } else {
@@ -556,6 +614,7 @@ public class ClientHandler extends Thread {
             }
         } catch (Exception e) {
             sendMessage("[System] 방 입장 중 오류가 발생했습니다: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
