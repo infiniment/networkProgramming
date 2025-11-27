@@ -11,7 +11,7 @@ public class ChatMessageRepository {
     private static final String URL =
             "jdbc:mysql://localhost:3306/chatdb?serverTimezone=UTC&characterEncoding=UTF-8";
     private static final String USER = "root";
-    private static final String PASSWORD = "htg99127@@";
+    private static final String PASSWORD = "1234";
 
 
     static {
