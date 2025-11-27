@@ -238,7 +238,7 @@
             leftPanel.add(btnBack);
             leftPanel.add(roomInfo);
 
-            JButton btnExit = new JButton("나가기") {
+            JButton btnExit = new JButton() {  // ← 텍스트 제거
                 private boolean hover = false;
                 {
                     addMouseListener(new MouseAdapter() {
@@ -250,6 +250,7 @@
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                     g2.setColor(hover ? new Color(230, 126, 34) : new Color(243, 156, 18));
                     g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
                     g2.setFont(FontManager.get("BMDOHYEON_ttf.ttf", Font.BOLD, 11));
@@ -263,6 +264,7 @@
                     super.paintComponent(g);
                 }
             };
+            btnExit.setText(null);  // ← 기본 텍스트 제거
             btnExit.setPreferredSize(new Dimension(60, 26));
             btnExit.setFocusPainted(false);
             btnExit.setBorderPainted(false);
@@ -345,15 +347,95 @@
             JPanel leftButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
             leftButtons.setOpaque(false);
 
-            // 이모티콘 버튼
-            btnEmoticon = createIconButton("^_^");
+            // 이모티콘 버튼 - 이미지로 변경
+            // 이모티콘 버튼 - 이미지 + 테두리
+            btnEmoticon = new JButton() {
+                private boolean hover = false;
+                {
+                    addMouseListener(new MouseAdapter() {
+                        public void mouseEntered(MouseEvent e) { hover = true; setCursor(new Cursor(Cursor.HAND_CURSOR)); repaint(); }
+                        public void mouseExited (MouseEvent e) { hover = false; setCursor(new Cursor(Cursor.DEFAULT_CURSOR)); repaint(); }
+                    });
+                }
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                    // 배경 (호버 시 살짝 어둡게)
+                    if (hover) {
+                        g2.setColor(new Color(245, 245, 245));
+                        g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
+                    }
+
+                    // 테두리
+                    g2.setColor(hover ? Colors.PRIMARY : Colors.INPUT_BORDER);
+                    g2.setStroke(new BasicStroke(2));
+                    g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
+
+                    // 이미지 로드 및 그리기
+                    ImageIcon icon = loadImageIcon("images/emoji.png", 35);
+                    if (icon != null) {
+                        int x = (getWidth() - icon.getIconWidth()) / 2;
+                        int y = (getHeight() - icon.getIconHeight()) / 2;
+                        g2.drawImage(icon.getImage(), x, y, this);
+                    }
+
+                    g2.dispose();
+                }
+            };
+            btnEmoticon.setPreferredSize(new Dimension(50, 45));
+            btnEmoticon.setFocusPainted(false);
+            btnEmoticon.setBorderPainted(false);
+            btnEmoticon.setContentAreaFilled(false);
+            btnEmoticon.setOpaque(false);
             btnEmoticon.setToolTipText("이모티콘");
             btnEmoticon.addActionListener(e -> openEmojiPicker());
             leftButtons.add(btnEmoticon);
 
-            // 폭탄 메시지 버튼
-            btnBombMessage = createIconButton("BOMB");
-            btnBombMessage.setFont(FontManager.get("BMDOHYEON_ttf.ttf", Font.BOLD, 10));
+// 폭탄 메시지 버튼 - 이미지 + 테두리
+            btnBombMessage = new JButton() {
+                private boolean hover = false;
+                {
+                    addMouseListener(new MouseAdapter() {
+                        public void mouseEntered(MouseEvent e) { hover = true; setCursor(new Cursor(Cursor.HAND_CURSOR)); repaint(); }
+                        public void mouseExited (MouseEvent e) { hover = false; setCursor(new Cursor(Cursor.DEFAULT_CURSOR)); repaint(); }
+                    });
+                }
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                    // 배경 (호버 시 살짝 어둡게)
+                    if (hover) {
+                        g2.setColor(new Color(245, 245, 245));
+                        g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
+                    }
+
+                    // 테두리
+                    g2.setColor(hover ? Colors.PRIMARY : Colors.INPUT_BORDER);
+                    g2.setStroke(new BasicStroke(2));
+                    g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
+
+                    // 이미지 로드 및 그리기
+                    ImageIcon icon = loadImageIcon("images/bombs.png", 35);
+                    if (icon != null) {
+                        int x = (getWidth() - icon.getIconWidth()) / 2;
+                        int y = (getHeight() - icon.getIconHeight()) / 2;
+                        g2.drawImage(icon.getImage(), x, y, this);
+                    }
+
+                    g2.dispose();
+                }
+            };
+            btnBombMessage.setPreferredSize(new Dimension(50, 45));
+            btnBombMessage.setFocusPainted(false);
+            btnBombMessage.setBorderPainted(false);
+            btnBombMessage.setContentAreaFilled(false);
+            btnBombMessage.setOpaque(false);
             btnBombMessage.setToolTipText("폭탄 메시지");
             btnBombMessage.addActionListener(e -> showBombMessageDialog());
             leftButtons.add(btnBombMessage);
@@ -398,12 +480,23 @@
             inputPanel.add(inputWrapper, BorderLayout.CENTER);
             inputPanel.add(btnSend, BorderLayout.EAST);
 
-    //        // 입력창 아래 이모티콘 패널 (처음엔 숨김)
-    //        emoticonPanel = buildEmoticonPanel();
-    //        emoticonPanel.setVisible(false);
-    //        inputPanel.add(emoticonPanel, BorderLayout.SOUTH);
-
             return inputPanel;
+        }
+
+        private ImageIcon loadImageIcon(String path, int size) {
+            try {
+                java.net.URL url = getClass().getClassLoader().getResource(path);
+                if (url == null) {
+                    System.err.println("이미지를 찾을 수 없습니다: " + path);
+                    return null;
+                }
+                ImageIcon original = new ImageIcon(url);
+                Image scaled = original.getImage().getScaledInstance(size, size, Image.SCALE_SMOOTH);
+                return new ImageIcon(scaled);
+            } catch (Exception e) {
+                System.err.println("이미지 로드 실패: " + path + " - " + e.getMessage());
+                return null;
+            }
         }
 
         // ========== 이모티콘 패널 ==========
@@ -809,7 +902,7 @@
 
         // ========== 시크릿 모드 버튼 ==========
         private JToggleButton createSecretModeButton() {
-            JToggleButton btn = new JToggleButton("SECRET") {
+            JToggleButton btn = new JToggleButton() {  // ← 텍스트 제거
                 @Override
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
@@ -828,6 +921,7 @@
                     super.paintComponent(g);
                 }
             };
+            btn.setText(null);  // ← 기본 텍스트 제거
             btn.setPreferredSize(new Dimension(65, 30));
             btn.setMinimumSize(new Dimension(65, 30));
             btn.setMaximumSize(new Dimension(65, 30));
@@ -836,23 +930,6 @@
             btn.setContentAreaFilled(false);
             btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-    //        btn.addActionListener(e -> {
-    //            if (client == null) return;
-    //            boolean wantOn = btn.isSelected();
-    //
-    //            if (wantOn) secretMgr.optimisticOn();
-    //            else        secretMgr.optimisticOff();
-    //
-    //            btn.setEnabled(false);
-    //
-    //            // 전송은 헬퍼 사용
-    //            sendAsync(wantOn ? Constants.CMD_SECRET_ON : Constants.CMD_SECRET_OFF);
-    //
-    //            SwingUtilities.invokeLater(() -> {
-    //                btn.setEnabled(true);
-    //                tfInput.requestFocusInWindow();
-    //            });
-    //        });
             btn.addActionListener(e -> {
                 if (client == null) return;
                 boolean wantOn = btn.isSelected();
@@ -878,14 +955,12 @@
                 });
             });
 
-
-
             return btn;
         }
 
         // ========== 미니게임 버튼 ==========
         private JButton createMiniGameButton() {
-            JButton btn = new JButton("🎮") {
+            JButton btn = new JButton() {  // ← 텍스트 제거
                 private boolean hover = false;
                 {
                     addMouseListener(new MouseAdapter() {
@@ -911,6 +986,7 @@
                     super.paintComponent(g);
                 }
             };
+            btn.setText(null);  // ← 기본 텍스트 제거
             btn.setPreferredSize(new Dimension(40, 30));
             btn.setMinimumSize(new Dimension(40, 30));
             btn.setMaximumSize(new Dimension(40, 30));
@@ -920,14 +996,13 @@
             btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
             btn.setOpaque(false);
             btn.setToolTipText("미니게임 선택");
-    //        btn.addActionListener(e -> showGameSelectionDialog());
             btn.addActionListener(e -> { System.out.println("[UI] miniGame clicked by " + nickname); showGameSelectionDialog(); });
             return btn;
         }
 
         // ========== 아이콘 버튼 ==========
         private JButton createIconButton(String text) {
-            JButton btn = new JButton(text) {
+            JButton btn = new JButton() {  // ← 생성자에서 텍스트 제거
                 private boolean hover = false;
                 {
                     addMouseListener(new MouseAdapter() {
@@ -939,13 +1014,23 @@
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                     g2.setColor(hover ? Colors.INPUT_BORDER : Colors.INPUT_BG);
                     g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+
+                    // ✅ 텍스트 그리기 추가
+                    g2.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
+                    g2.setColor(Colors.TEXT_PRIMARY);
+                    FontMetrics fm = g2.getFontMetrics();
+                    int x = (getWidth() - fm.stringWidth(text)) / 2;
+                    int y = (getHeight() + fm.getAscent()) / 2 - 2;
+                    g2.drawString(text, x, y);
+
                     g2.dispose();
                     super.paintComponent(g);
                 }
             };
-            btn.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
+            btn.setText(null);  // ← 기본 텍스트 제거
             btn.setForeground(Colors.TEXT_PRIMARY);
             btn.setPreferredSize(new Dimension(50, 45));
             btn.setFocusPainted(false);
@@ -958,7 +1043,7 @@
 
         // ========== 전송 버튼 ==========
         private JButton createSendButton() {
-            JButton btn = new JButton("전송") {
+            JButton btn = new JButton() {  // ← 텍스트 제거
                 private boolean hover = false;
                 private boolean pressed = false;
                 {
@@ -973,6 +1058,7 @@
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                     if (pressed)      g2.setColor(new Color(255, 120, 20));
                     else if (hover)   g2.setColor(Colors.PRIMARY_HOVER);
                     else              g2.setColor(Colors.PRIMARY);
@@ -990,6 +1076,7 @@
                     super.paintComponent(g);
                 }
             };
+            btn.setText(null);  // ← 기본 텍스트 제거
             btn.setPreferredSize(new Dimension(80, 45));
             btn.setFocusPainted(false);
             btn.setBorderPainted(false);
@@ -1374,6 +1461,17 @@
                 btnSend.setEnabled(true);
                 tfInput.setEnabled(true);
                 tfInput.requestFocusInWindow();
+
+                // ✅ 방 입장 후 참여자 정보 자동 요청
+                if (this.client != null) {
+                    // 약간의 딜레이 후 요청 (서버 연결 안정화)
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(500); // 0.5초 대기
+                            this.client.sendMessage("/who");
+                        } catch (InterruptedException ignored) {}
+                    }).start();
+                }
             });
         }
 
@@ -1386,6 +1484,25 @@
         public void onMessageReceived(String line) {
             // 방 목록 응답은 채팅창에 표시하지 않음
             if (line.startsWith(Constants.RESPONSE_ROOMS + " ") || line.startsWith("@rooms ")) return;
+
+            // ✅ 참여자 정보 업데이트 추가 (여기!)
+            if (line.startsWith("[System] 참여자 (")) {
+                try {
+                    // "[System] 참여자 (3): nick1, nick2, nick3" 형식에서 숫자 추출
+                    int start = line.indexOf("(") + 1;
+                    int end = line.indexOf(")");
+                    if (start > 0 && end > start) {
+                        String countStr = line.substring(start, end).trim();
+                        int count = Integer.parseInt(countStr);
+                        updateMemberCount(count);
+                    }
+                } catch (Exception e) {
+                    System.err.println("참여자 수 파싱 실패: " + e.getMessage());
+                }
+                // 시스템 메시지로도 표시
+                addSystemMessage(line.substring("[System] ".length()));
+                return;
+            }
 
             // 폭탄 이벤트
             if (line.startsWith(Constants.EVT_BOMB + " ")) {
