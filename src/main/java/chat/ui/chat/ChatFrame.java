@@ -1454,7 +1454,6 @@
         // ========== ChatClient 바인딩 ==========
         public void bind(ChatClient client) {
             this.client = client;
-            this.client.startReceiving(this);
             SwingUtilities.invokeLater(() -> {
                 lblStatusIcon.setIcon(UiUtils.makeStatusIcon(Colors.PRIMARY));
                 lblStatusText.setText("연결");
@@ -1666,91 +1665,6 @@
                 try { listener.onMessageReceived(line); } catch (Exception ignored) {}
             }
         }
-
-    //    private void handleGameMessage(String line) {
-    //        synchronized (gameListeners) {
-    //            if (gameListeners.isEmpty()) {
-    //                gameMessageBuffer.add(line);
-    //                return;
-    //            }
-    //            for (ChatClient.MessageListener listener : gameListeners) {
-    //                try { listener.onMessageReceived(line); } catch (Exception ignored) {}
-    //            }
-    //        }
-    //    }
-
-    //    private void parseAndDisplayMessage(String line) {
-    //        if (line == null) return;
-    //        line = line.trim();
-    //
-    //        if (!line.contains(":") && !line.startsWith(Constants.EVT_SECRET_MSG)) {
-    //            addSystemMessage(line);
-    //            return;
-    //        }
-    //
-    //        if (line.startsWith("[BOMB ")) {
-    //            if (line.contains("] " + nickname + ":")) return; // 내 폭탄은 무시해서 중복 제거
-    //        }
-    //
-    //
-    //
-    //        // 자신의 메시지 무시
-    //        if (line.startsWith(nickname + ":")) return;
-    //
-    //        // 시스템 메시지
-    //        if (line.startsWith("[System] ")) {
-    //            String message = line.substring("[System] ".length()).trim();
-    //            addSystemMessage(message);
-    //            return;
-    //        }
-    //
-    //        // 타이핑 상태
-    //        if (line.contains(Constants.CMD_TYPING_START) || line.contains(Constants.CMD_TYPING_STOP)) {
-    //            String status = line.contains(Constants.CMD_TYPING_START) ? Constants.CMD_TYPING_START : Constants.CMD_TYPING_STOP;
-    //            String user = extractUsername(line);
-    //            if (!"Unknown".equals(user)) {
-    //                if (status.equals(Constants.CMD_TYPING_START)) typingUsers.add(user);
-    //                else typingUsers.remove(user);
-    //                updateTypingIndicator();
-    //            }
-    //            return;
-    //        }
-    //
-    //        // === 이모티콘 패킷 처리 ===
-    //        int idx = line.indexOf(":");
-    //        if (idx > 0) {
-    //            String user = line.substring(0, idx).trim();
-    //            String payload = line.substring(idx + 1).trim();
-    //
-    //            // 내 에코는 무시 (이미 addMyEmojiMessage에서 그림)
-    //            if (user.equals(nickname)) return;
-    //
-    //            if (payload.startsWith(Constants.PKG_EMOJI)) {
-    //                String code = payload.substring(Constants.PKG_EMOJI.length()).trim(); // ":doing:"
-    //                addOtherEmojiMessage(user, code);
-    //                return;
-    //            }
-    //        }
-    //
-    //        // === 나머지는 일반 텍스트 ===
-    //        if (!line.contains(":") && !line.startsWith(Constants.EVT_SECRET_MSG)) {
-    //            addSystemMessage(line);
-    //            return;
-    //        }
-    //
-    //        if (line.startsWith(nickname + ":")) return;
-    //
-    //        if (line.startsWith("[System] ")) {
-    //            String message = line.substring("[System] ".length()).trim();
-    //            addSystemMessage(message);
-    //            return;
-    //        }
-    //
-    //        // typing 등 기존 로직 그대로...
-    //        String user = extractUsername(line);
-    //        String message = extractMessage(line);
-    //        if (user != null && message != null) addOtherMessage(user, message);
-    //    }
 
         private void parseAndDisplayMessage(String line) {
             if (line == null) return;

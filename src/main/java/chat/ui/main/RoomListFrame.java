@@ -78,21 +78,33 @@
 //    }
 //
 //    // ========== 헤더 영역 ==========
+//    // ========== 헤더 영역 ==========
 //    private JComponent buildHeader() {
-//        JPanel header = new RoundedPanel(15);
+//        JPanel header = new RoundedPanel(18);
 //        header.setBackground(CARD_BG);
 //        header.setBorder(new EmptyBorder(18, 24, 18, 24));
-//        header.setLayout(new BorderLayout());
-//        header.setPreferredSize(new Dimension(0, 70));
+//        header.setLayout(new BorderLayout(20, 0));
+//        header.setPreferredSize(new Dimension(0, 80));
 //
-//        JPanel leftPanel = new JPanel(new GridBagLayout());
+//        // -------- 왼쪽: 타이틀 + 서브타이틀 --------
+//        JPanel leftPanel = new JPanel();
 //        leftPanel.setOpaque(false);
-//        JLabel title = new JLabel("📋 채팅방 목록");
+//        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
+//
+//        JLabel title = new JLabel("오픈 채팅방");
 //        title.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 22));
 //        title.setForeground(TEXT_PRIMARY);
-//        leftPanel.add(title);
 //
-//        JPanel rightPanel = new JPanel(new GridBagLayout());
+//        JLabel subtitle = new JLabel("관심 있는 주제의 채팅방에 바로 참여해 보세요");
+//        subtitle.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 12));
+//        subtitle.setForeground(new Color(120, 130, 140));
+//
+//        leftPanel.add(title);
+//        leftPanel.add(Box.createVerticalStrut(4));
+//        leftPanel.add(subtitle);
+//
+//        // -------- 오른쪽: 상태 + 유저 정보 --------
+//        JPanel rightPanel = new JPanel(new BorderLayout());
 //        rightPanel.setOpaque(false);
 //
 //        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -100,7 +112,7 @@
 //
 //        lblStatusIcon = new JLabel(makeStatusIcon(PRIMARY));
 //        lblStatusText = new JLabel("연결됨");
-//        lblStatusText.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 13));
+//        lblStatusText.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 12));
 //        lblStatusText.setForeground(TEXT_PRIMARY);
 //
 //        JLabel lblUser = new JLabel("👤 " + nickname);
@@ -117,7 +129,7 @@
 //        right.add(lblUser);
 //        right.add(lblServer);
 //
-//        rightPanel.add(right);
+//        rightPanel.add(right, BorderLayout.CENTER);
 //
 //        header.add(leftPanel, BorderLayout.WEST);
 //        header.add(rightPanel, BorderLayout.EAST);
@@ -188,12 +200,25 @@
 //        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
 //        panel.setLayout(new BorderLayout(0, 12));
 //
+//        // -------- 상단 타이틀 영역 --------
 //        JPanel top = new JPanel(new BorderLayout());
 //        top.setOpaque(false);
 //
-//        JLabel sectionTitle = new JLabel("🎯 활성 채팅방");
+//        JPanel titleBox = new JPanel();
+//        titleBox.setOpaque(false);
+//        titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
+//
+//        JLabel sectionTitle = new JLabel("현재 열려 있는 채팅방");
 //        sectionTitle.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 16));
 //        sectionTitle.setForeground(TEXT_PRIMARY);
+//
+//        JLabel sectionSub = new JLabel("새로고침하면 최신 참여자 수와 활성 상태가 반영됩니다");
+//        sectionSub.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
+//        sectionSub.setForeground(new Color(140, 148, 160));
+//
+//        titleBox.add(sectionTitle);
+//        titleBox.add(Box.createVerticalStrut(2));
+//        titleBox.add(sectionSub);
 //
 //        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
 //        actions.setOpaque(false);
@@ -207,17 +232,19 @@
 //        actions.add(btnRefresh);
 //        actions.add(btnCreate);
 //
-//        top.add(sectionTitle, BorderLayout.WEST);
+//        top.add(titleBox, BorderLayout.WEST);
 //        top.add(actions, BorderLayout.EAST);
 //
+//        // -------- 리스트 영역 --------
 //        roomList = new JList<>(model);
 //        roomList.setCellRenderer(new RoomRenderer());
-//        roomList.setBackground(Color.WHITE);
-//        roomList.setSelectionBackground(Color.WHITE);
+//        roomList.setBackground(new Color(250, 250, 250));
+//        roomList.setSelectionBackground(new Color(255, 244, 233)); // 살짝 주황빛 하이라이트
 //        roomList.setSelectionForeground(TEXT_PRIMARY);
 //        roomList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+//        roomList.setFixedCellHeight(80);
 //
-//        // 🔧 셀 더블클릭 시 방 입장
+//        // (기존 더블클릭/입장/삭제 로직 그대로 유지)
 //        roomList.addMouseListener(new MouseAdapter() {
 //            @Override
 //            public void mouseClicked(MouseEvent e) {
@@ -230,7 +257,7 @@
 //                int relX = e.getX() - cell.x;
 //                int w = cell.width;
 //
-//                // 마지막 50px 정도: 삭제 버튼 영역
+//                // 마지막 50px: 삭제 버튼
 //                if (relX > w - 50) {
 //                    RoomDto r = model.get(index);
 //                    int res = JOptionPane.showConfirmDialog(
@@ -246,14 +273,14 @@
 //                    return;
 //                }
 //
-//                // 그 앞 100px 정도: 입장 버튼 영역
+//                // 그 앞 100px: 입장 버튼
 //                if (relX > w - 150) {
 //                    roomList.setSelectedIndex(index);
 //                    joinSelected();
 //                    return;
 //                }
 //
-//                // 버튼 영역이 아닌 곳 더블클릭 → 입장
+//                // 나머지 영역 더블클릭 → 입장
 //                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
 //                    roomList.setSelectedIndex(index);
 //                    joinSelected();
@@ -278,7 +305,6 @@
 //                int relX = e.getX() - cell.x;
 //                int w = cell.width;
 //
-//                // 입장/삭제 영역 위에 있을 땐 손가락 커서
 //                if (relX > w - 150) {
 //                    roomList.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 //                } else {
@@ -288,8 +314,8 @@
 //        });
 //
 //        JScrollPane scroll = new JScrollPane(roomList);
-//        scroll.setBorder(BorderFactory.createLineBorder(ACCENT_LIGHT, 1));
-//        scroll.getViewport().setBackground(Color.WHITE);
+//        scroll.setBorder(BorderFactory.createEmptyBorder());
+//        scroll.getViewport().setBackground(new Color(250, 250, 250));
 //
 //        panel.add(top, BorderLayout.NORTH);
 //        panel.add(scroll, BorderLayout.CENTER);
@@ -361,7 +387,8 @@
 //    }
 //
 //    // ========== 방 만들기 다이얼로그 ==========
-//    private void showCreateDialog() {
+//    void showCreateDialog() {
+//        // ====== 입력 컴포넌트 생성 (기존 로직 그대로) ======
 //        JTextField tfName = new JTextField();
 //        tfName.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
 //
@@ -371,16 +398,16 @@
 //        JCheckBox ckLock = new JCheckBox("비밀방 (잠금)");
 //        ckLock.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 13));
 //
-//        // 🔑 비밀번호 입력 필드 추가
+//        // 🔑 비밀번호 입력 필드
 //        JLabel lblPassword = new JLabel("비밀번호 (4자리 숫자)");
 //        lblPassword.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 13));
 //        lblPassword.setVisible(false);  // 처음엔 숨김
 //
-//        JTextField tfPassword = new JTextField();  // 🔥 JTextField 사용 (숫자만 입력되도록 제한)
+//        JTextField tfPassword = new JTextField();  // 숫자만 입력되도록 제한
 //        tfPassword.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
 //        tfPassword.setVisible(false);  // 처음엔 숨김
 //
-//        // 숫자 4자리만 입력 가능하도록 제한
+//        // 숫자 4자리만 입력 가능하도록 제한 (기존 로직 그대로)
 //        tfPassword.setDocument(new javax.swing.text.PlainDocument() {
 //            @Override
 //            public void insertString(int offs, String str, javax.swing.text.AttributeSet a)
@@ -393,32 +420,139 @@
 //            }
 //        });
 //
-//        // 체크박스 상태에 따라 비밀번호 필드 표시/숨김
+//        // 체크박스 상태에 따라 비밀번호 필드 표시/숨김 (기존 로직 그대로)
 //        ckLock.addActionListener(e -> {
 //            boolean checked = ckLock.isSelected();
 //            lblPassword.setVisible(checked);
 //            tfPassword.setVisible(checked);
 //            tfPassword.setText("");  // 체크 해제 시 비밀번호 초기화
+//
+//            java.awt.Window win = SwingUtilities.getWindowAncestor(ckLock);
+//            if (win != null) {
+//                win.pack();
+//                win.setLocationRelativeTo(RoomListFrame.this);
+//            }
 //        });
 //
-//        JPanel p = new JPanel(new GridLayout(0, 1, 8, 8));
-//        p.setBorder(new EmptyBorder(12, 12, 12, 12));
+//        // ====== 레이아웃: 카드 스타일 다이얼로그 ======
+//        JPanel root = new JPanel(new BorderLayout());
+//        root.setBackground(BG_COLOR);
+//        root.setBorder(new EmptyBorder(10, 10, 10, 10));
 //
+//        RoundedPanel card = new RoundedPanel(18);
+//        card.setBackground(Color.WHITE);
+//        card.setLayout(new BorderLayout(0, 16));
+//        card.setBorder(new EmptyBorder(16, 20, 16, 20));
+//
+//        // --- 상단 헤더 영역 ---
+//        JPanel header = new JPanel();
+//        header.setOpaque(false);
+//        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+//
+//        JLabel title = new JLabel("새 오픈 채팅방 만들기");
+//        title.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 16));
+//        title.setForeground(TEXT_PRIMARY);
+//
+//        JLabel subtitle = new JLabel("방 이름과 정원, 필요하다면 비밀방 비밀번호를 설정하세요.");
+//        subtitle.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
+//        subtitle.setForeground(new Color(120, 130, 140));
+//
+//        header.add(title);
+//        header.add(Box.createVerticalStrut(4));
+//        header.add(subtitle);
+//
+//        // --- 폼 영역 ---
+//        JPanel form = new JPanel();
+//        form.setOpaque(false);
+//        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+//
+//        // 방 이름
 //        JLabel lblName = new JLabel("방 이름");
 //        lblName.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 13));
+//
+//        tfName.setBackground(new Color(250, 250, 252));
+//        tfName.setBorder(BorderFactory.createCompoundBorder(
+//                BorderFactory.createLineBorder(new Color(225, 228, 234), 1, true),
+//                new EmptyBorder(8, 10, 8, 10)
+//        ));
+//
+//        form.add(lblName);
+//        form.add(Box.createVerticalStrut(4));
+//        form.add(tfName);
+//        form.add(Box.createVerticalStrut(12));
+//
+//        // 정원
 //        JLabel lblCap = new JLabel("정원");
 //        lblCap.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 13));
 //
-//        p.add(lblName);
-//        p.add(tfName);
-//        p.add(lblCap);
-//        p.add(spCap);
-//        p.add(ckLock);
-//        p.add(lblPassword);    // 🔑 비밀번호 레이블 추가
-//        p.add(tfPassword);     // 🔑 비밀번호 입력 필드 추가
+//        JComponent capEditor = spCap.getEditor();
+//        if (capEditor instanceof JSpinner.DefaultEditor) {
+//            JSpinner.DefaultEditor editor = (JSpinner.DefaultEditor) capEditor;
+//            editor.getTextField().setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
+//            editor.getTextField().setBackground(new Color(250, 250, 252));
+//            editor.getTextField().setBorder(BorderFactory.createCompoundBorder(
+//                    BorderFactory.createLineBorder(new Color(225, 228, 234), 1, true),
+//                    new EmptyBorder(8, 10, 8, 10)
+//            ));
+//        }
 //
-//        int ok = JOptionPane.showConfirmDialog(this, p, "새 방 만들기",
-//                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+//        JPanel capRow = new JPanel(new BorderLayout(8, 0));
+//        capRow.setOpaque(false);
+//        capRow.add(spCap, BorderLayout.WEST);
+//
+//        JLabel capHint = new JLabel("명 (2 ~ 99명)");
+//        capHint.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
+//        capHint.setForeground(new Color(140, 148, 160));
+//        capRow.add(capHint, BorderLayout.CENTER);
+//
+//        form.add(lblCap);
+//        form.add(Box.createVerticalStrut(4));
+//        form.add(capRow);
+//        form.add(Box.createVerticalStrut(12));
+//
+//        // 비밀방 체크
+//        ckLock.setOpaque(false);
+//        form.add(ckLock);
+//        form.add(Box.createVerticalStrut(6));
+//
+//        // 비밀번호 영역 (레이블 + 필드 가로 배치)
+//        JPanel pwRow = new JPanel(new BorderLayout(8, 0));
+//        pwRow.setOpaque(false);
+//
+//        tfPassword.setBackground(new Color(250, 250, 252));
+//        tfPassword.setBorder(BorderFactory.createCompoundBorder(
+//                BorderFactory.createLineBorder(new Color(225, 228, 234), 1, true),
+//                new EmptyBorder(8, 10, 8, 10)
+//        ));
+//
+//        pwRow.add(lblPassword, BorderLayout.WEST);
+//        pwRow.add(tfPassword, BorderLayout.CENTER);
+//
+//        form.add(pwRow);
+//
+//        // --- 하단 안내 문구 ---
+//        JLabel hint = new JLabel("• 비밀방을 선택하면 4자리 숫자 비밀번호가 필요해요.");
+//        hint.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
+//        hint.setForeground(new Color(160, 168, 178));
+//
+//        card.add(header, BorderLayout.NORTH);
+//        card.add(form, BorderLayout.CENTER);
+//        JPanel hintWrapper = new JPanel(new BorderLayout());
+//        hintWrapper.setOpaque(false);
+//        hintWrapper.setBorder(new EmptyBorder(4, 0, 0, 0));
+//        hintWrapper.add(hint, BorderLayout.CENTER);
+//        card.add(hintWrapper, BorderLayout.SOUTH);
+//
+//        root.add(card, BorderLayout.CENTER);
+//
+//        // ====== 다이얼로그 표시 (확인 버튼/취소 버튼 로직 그대로) ======
+//        int ok = JOptionPane.showConfirmDialog(
+//                this,
+//                root,
+//                "새 방 만들기",
+//                JOptionPane.OK_CANCEL_OPTION,
+//                JOptionPane.PLAIN_MESSAGE
+//        );
 //
 //        if (ok == JOptionPane.OK_OPTION) {
 //            String name = tfName.getText().trim();
@@ -426,17 +560,19 @@
 //            boolean lock = ckLock.isSelected();
 //            String password = tfPassword.getText().trim();  // 🔑 비밀번호 가져오기
 //
-//            // 🔒 비밀방인데 비밀번호가 4자리가 아니면 경고
+//            // 🔒 비밀방인데 비밀번호가 4자리가 아니면 경고 (기존 로직 그대로)
 //            if (lock && password.length() != 4) {
-//                JOptionPane.showMessageDialog(this,
+//                JOptionPane.showMessageDialog(
+//                        this,
 //                        "비밀번호는 4자리 숫자여야 합니다.",
 //                        "입력 오류",
-//                        JOptionPane.WARNING_MESSAGE);
+//                        JOptionPane.WARNING_MESSAGE
+//                );
 //                return;
 //            }
 //
 //            if (!name.isEmpty() && client != null) {
-//                // 🔑 비밀번호를 포함해서 서버에 전송
+//                // 🔑 비밀번호를 포함해서 서버에 전송 (기존 프로토콜 그대로)
 //                String lockStatus = lock ? "lock" : "open";
 //                String cmd = lock
 //                        ? String.format("%s %s %d %s %s", Constants.CMD_ROOM_CREATE, name, cap, lockStatus, password)
@@ -853,49 +989,113 @@
 //        private final JLabel name = new JLabel();
 //        private final JLabel sub = new JLabel();
 //        private final JLabel status = new JLabel("● 활성");
+//        private final JLabel badgeLock = new JLabel();      // 🔒/공개 뱃지
+//        private final JLabel badgeCount = new JLabel();     // 인원 뱃지
 //        private final JButton joinBtn;
-//        private final JButton deleteBtn;   // 🔥 휴지통 버튼
+//        private final JButton deleteBtn;
+//
+//        private boolean selected;
+//        private boolean locked;
 //
 //        public RoomRenderer() {
-//            setLayout(new BorderLayout(16, 8));
-//            setBorder(new EmptyBorder(14, 18, 14, 18));
+//            // 🔹 전체 3컬럼 레이아웃: 왼쪽 / 가운데 / 오른쪽
+//            setLayout(new BorderLayout(16, 0));
+//            setBorder(new EmptyBorder(8, 16, 8, 16));
+//            setOpaque(false);
 //
-//            JPanel left = new JPanel(new BorderLayout(10, 0));
-//            left.setOpaque(false);
+//            /* ---------- LEFT : 아이콘 + 공개방/인원수 ---------- */
+//            JPanel leftCol = new JPanel();
+//            leftCol.setOpaque(false);
+//            leftCol.setLayout(new BoxLayout(leftCol, BoxLayout.Y_AXIS));
 //
+//            JPanel iconRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+//            iconRow.setOpaque(false);
 //            icon.setFont(new Font("Dialog", Font.PLAIN, 22));
 //            icon.setPreferredSize(new Dimension(30, 30));
-//            left.add(icon, BorderLayout.WEST);
+//            iconRow.add(icon);
 //
-//            JPanel text = new JPanel(new GridLayout(2, 1, 0, 3));
-//            text.setOpaque(false);
+//            JPanel badgeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+//            badgeRow.setOpaque(false);
+//
+//            badgeLock.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
+//            badgeLock.setBorder(new EmptyBorder(2, 6, 2, 6));
+//
+//            badgeCount.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
+//            badgeCount.setBorder(new EmptyBorder(2, 6, 2, 6));
+//
+//            badgeRow.add(badgeLock);
+//            badgeRow.add(badgeCount);
+//
+//            leftCol.add(iconRow);
+//            leftCol.add(Box.createVerticalStrut(6));
+//            leftCol.add(badgeRow);
+//
+//            /* ---------- CENTER : 방 제목 + 서브텍스트 ---------- */
+//            JPanel centerCol = new JPanel();
+//            centerCol.setOpaque(false);
+//            centerCol.setLayout(new BoxLayout(centerCol, BoxLayout.Y_AXIS));
 //
 //            name.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 15));
 //            name.setForeground(TEXT_PRIMARY);
+//            name.setHorizontalAlignment(SwingConstants.CENTER);
+//            name.setAlignmentX(0.5f);
 //
-//            sub.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 12));
-//            sub.setForeground(new Color(120, 130, 140));
+//            sub.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
+//            sub.setForeground(new Color(130, 138, 150));
+//            sub.setHorizontalAlignment(SwingConstants.CENTER);
+//            sub.setAlignmentX(0.5f);
 //
-//            text.add(name);
-//            text.add(sub);
-//            left.add(text, BorderLayout.CENTER);
+//            centerCol.add(name);
+//            centerCol.add(Box.createVerticalStrut(4));
+//            centerCol.add(sub);
 //
-//            JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-//            right.setOpaque(false);
+//            /* ---------- RIGHT : 상태 + 버튼들 ---------- */
+//            JPanel rightCol = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+//            rightCol.setOpaque(false);
 //
-//            status.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 12));
-//            status.setForeground(PRIMARY);
-//            status.setPreferredSize(new Dimension(50, 20));
+//            status.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
+//            status.setPreferredSize(new Dimension(56, 20));
 //
-//            joinBtn   = createSmallButton("입장하기");
-//            deleteBtn = createIconButton("🗑");
+//            joinBtn   = createSmallButton("입장");
+//            deleteBtn = createDeleteButton("삭제");
 //
-//            right.add(status);
-//            right.add(joinBtn);
-//            right.add(deleteBtn);
+//            rightCol.add(status);
+//            rightCol.add(joinBtn);
+//            rightCol.add(deleteBtn);
 //
-//            add(left, BorderLayout.CENTER);
-//            add(right, BorderLayout.EAST);
+//            /* 🔥 여기서부터: 세로 가운데 정렬을 위한 래퍼들 */
+//
+//            // 왼쪽(아이콘/뱃지) 세로 가운데 + 좌측 정렬
+//            JPanel leftWrapper = new JPanel(new GridBagLayout());
+//            leftWrapper.setOpaque(false);
+//            GridBagConstraints gbcLeft = new GridBagConstraints();
+//            gbcLeft.gridx = 0;
+//            gbcLeft.gridy = 0;
+//            gbcLeft.anchor = GridBagConstraints.WEST;   // 가로는 왼쪽, 세로는 가운데
+//            leftWrapper.add(leftCol, gbcLeft);
+//
+//            // 가운데(방 제목) 세로 가운데
+//            JPanel centerWrapper = new JPanel(new GridBagLayout());
+//            centerWrapper.setOpaque(false);
+//            GridBagConstraints gbcCenter = new GridBagConstraints();
+//            gbcCenter.gridx = 0;
+//            gbcCenter.gridy = 0;
+//            gbcCenter.anchor = GridBagConstraints.CENTER;
+//            centerWrapper.add(centerCol, gbcCenter);
+//
+//            // 오른쪽(상태+버튼) 세로 가운데 + 우측 정렬
+//            JPanel rightWrapper = new JPanel(new GridBagLayout());
+//            rightWrapper.setOpaque(false);
+//            GridBagConstraints gbcRight = new GridBagConstraints();
+//            gbcRight.gridx = 0;
+//            gbcRight.gridy = 0;
+//            gbcRight.anchor = GridBagConstraints.EAST;  // 가로는 오른쪽, 세로는 가운데
+//            rightWrapper.add(rightCol, gbcRight);
+//
+//            // BorderLayout에 래퍼들을 배치
+//            add(leftWrapper, BorderLayout.WEST);
+//            add(centerWrapper, BorderLayout.CENTER);
+//            add(rightWrapper, BorderLayout.EAST);
 //        }
 //
 //        private JButton createSmallButton(String text) {
@@ -904,40 +1104,18 @@
 //                private boolean btnPressed = false;
 //
 //                {
+//                    setFocusPainted(false);
+//                    setBorderPainted(false);
+//                    setContentAreaFilled(false);
+//                    setOpaque(false);
+//                    setCursor(new Cursor(Cursor.HAND_CURSOR));
+//
 //                    addMouseListener(new MouseAdapter() {
-//                        @Override
-//                        public void mouseEntered(MouseEvent e) {
-//                            if (isEnabled()) {
-//                                btnHover = true;
-//                                repaint();
-//                            }
-//                        }
-//
-//                        @Override
-//                        public void mouseExited(MouseEvent e) {
-//                            btnHover = false;
-//                            btnPressed = false;
-//                            repaint();
-//                        }
-//
-//                        @Override
-//                        public void mousePressed(MouseEvent e) {
-//                            if (isEnabled()) {
-//                                btnPressed = true;
-//                                repaint();
-//                            }
-//                        }
-//
-//                        @Override
-//                        public void mouseReleased(MouseEvent e) {
-//                            btnPressed = false;
-//                            repaint();
-//                        }
-//
-//                        @Override
-//                        public void mouseClicked(MouseEvent e) {
-//                            e.consume();
-//                        }
+//                        @Override public void mouseEntered(MouseEvent e) { if (isEnabled()) { btnHover = true; repaint(); } }
+//                        @Override public void mouseExited (MouseEvent e) { btnHover = false; btnPressed = false; repaint(); }
+//                        @Override public void mousePressed (MouseEvent e) { if (isEnabled()) { btnPressed = true; repaint(); } }
+//                        @Override public void mouseReleased(MouseEvent e) { btnPressed = false; repaint(); }
+//                        @Override public void mouseClicked (MouseEvent e) { e.consume(); }
 //                    });
 //                }
 //
@@ -946,50 +1124,52 @@
 //                    Graphics2D g2 = (Graphics2D) g.create();
 //                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 //
-//                    if (btnPressed) {
-//                        g2.setColor(new Color(255, 120, 20));
-//                    } else if (btnHover) {
-//                        g2.setColor(PRIMARY_HOVER);
-//                    } else {
-//                        g2.setColor(PRIMARY);
-//                    }
+//                    Color base = PRIMARY;
+//                    if (!isEnabled()) base = new Color(200, 200, 200);
+//                    else if (btnPressed) base = new Color(255, 120, 20);
+//                    else if (btnHover)  base = PRIMARY_HOVER;
 //
-//                    int offsetY = btnPressed ? 2 : 0;
+//                    int offsetY = btnPressed ? 1 : 0;
 //                    g2.translate(0, offsetY);
+//                    g2.setColor(base);
+//                    g2.fillRoundRect(0, 0, getWidth(), getHeight() - offsetY, 10, 10);
 //
-//                    g2.fillRoundRect(0, 0, getWidth(), getHeight() - (btnPressed ? 2 : 0), 8, 8);
+//                    g2.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.BOLD, 12));
+//                    g2.setColor(Color.WHITE);
+//                    FontMetrics fm = g2.getFontMetrics();
+//                    int w = fm.stringWidth(text);
+//                    int h = fm.getAscent();
+//                    int x = (getWidth() - w) / 2;
+//                    int y = (getHeight() + h) / 2 - 2;
+//                    g2.drawString(text, x, y);
 //
 //                    g2.dispose();
-//                    super.paintComponent(g);
 //                }
 //            };
-//
-//            btn.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.BOLD, 12));
-//            btn.setForeground(Color.WHITE);
-//            btn.setPreferredSize(new Dimension(90, 32));
-//            btn.setFocusPainted(false);
-//            btn.setBorderPainted(false);
-//            btn.setContentAreaFilled(false);
-//            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-//            btn.setHorizontalAlignment(SwingConstants.CENTER);
-//            btn.setVerticalAlignment(SwingConstants.CENTER);
-//
+//            btn.setPreferredSize(new Dimension(72, 30));
 //            return btn;
 //        }
 //
-//        private JButton createIconButton(String iconText) {
-//            JButton btn = new JButton(iconText) {
+//        // 🔴 삭제 버튼 (텍스트 "삭제" + 빨간 배경)
+//        private JButton createDeleteButton(String text) {
+//            JButton btn = new JButton(text) {
 //                private boolean hover = false;
 //                private boolean pressed = false;
 //
 //                {
-//                    setFont(new Font("Dialog", Font.PLAIN, 16));
+//                    setFocusPainted(false);
+//                    setBorderPainted(false);
+//                    setContentAreaFilled(false);
+//                    setOpaque(false);
+//                    setCursor(new Cursor(Cursor.HAND_CURSOR));
 //                    setMargin(new Insets(0, 0, 0, 0));
+//
 //                    addMouseListener(new MouseAdapter() {
 //                        @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
-//                        @Override public void mouseExited(MouseEvent e)  { hover = false; pressed = false; repaint(); }
-//                        @Override public void mousePressed(MouseEvent e) { pressed = true; repaint(); }
-//                        @Override public void mouseReleased(MouseEvent e){ pressed = false; repaint(); }
+//                        @Override public void mouseExited (MouseEvent e) { hover = false; pressed = false; repaint(); }
+//                        @Override public void mousePressed (MouseEvent e) { pressed = true; repaint(); }
+//                        @Override public void mouseReleased(MouseEvent e) { pressed = false; repaint(); }
+//                        @Override public void mouseClicked (MouseEvent e) { e.consume(); }
 //                    });
 //                }
 //
@@ -997,45 +1177,98 @@
 //                protected void paintComponent(Graphics g) {
 //                    Graphics2D g2 = (Graphics2D) g.create();
 //                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+//                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 //
-//                    if (pressed)      g2.setColor(new Color(230, 60, 60));
-//                    else if (hover)   g2.setColor(new Color(248, 113, 113));
-//                    else              g2.setColor(new Color(239, 68, 68));
+//                    Color base;
+//                    if (pressed)      base = new Color(220, 38, 38);
+//                    else if (hover)   base = new Color(248, 113, 113);
+//                    else              base = new Color(239, 68, 68);
 //
-//                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+//                    g2.setColor(base);
+//                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
 //
-//                    super.paintComponent(g);
+//                    g2.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.BOLD, 12));
+//                    g2.setColor(Color.WHITE);
+//                    FontMetrics fm = g2.getFontMetrics();
+//                    int w = fm.stringWidth(text);
+//                    int h = fm.getAscent();
+//                    int x = (getWidth() - w) / 2;
+//                    int y = (getHeight() + h) / 2 - 2;
+//                    g2.drawString(text, x, y);
+//
 //                    g2.dispose();
 //                }
 //            };
 //
-//            btn.setForeground(Color.WHITE);
-//            btn.setPreferredSize(new Dimension(36, 32));
-//            btn.setFocusPainted(false);
-//            btn.setBorderPainted(false);
-//            btn.setContentAreaFilled(false);
-//            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+//            btn.setPreferredSize(new Dimension(64, 30));   // 넉넉하게
 //            return btn;
+//        }
+//
+//
+//        @Override
+//        protected void paintComponent(Graphics g) {
+//            // 셀 전체를 하나의 카드처럼
+//            Graphics2D g2 = (Graphics2D) g.create();
+//            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+//
+//            Color cardBg;
+//            if (selected) {
+//                cardBg = new Color(255, 244, 233); // 선택 시
+//            } else if (locked) {
+//                cardBg = new Color(255, 247, 239); // 비밀방 살짝 강조
+//            } else {
+//                cardBg = Color.WHITE;
+//            }
+//
+//            int arc = 16;
+//            g2.setColor(cardBg);
+//            g2.fillRoundRect(4, 4, getWidth() - 8, getHeight() - 8, arc, arc);
+//
+//            // 살짝 그림자 느낌
+//            g2.setColor(new Color(0, 0, 0, 10));
+//            g2.drawRoundRect(4, 4, getWidth() - 8, getHeight() - 8, arc, arc);
+//
+//            g2.dispose();
+//            super.paintComponent(g);
 //        }
 //
 //        @Override
 //        public Component getListCellRendererComponent(JList<? extends RoomDto> list, RoomDto value,
 //                                                      int index, boolean isSelected, boolean cellHasFocus) {
-//            // 🔒 비밀방이면 이름 옆에 (비밀방) 표시 + 주황색 배경
-//            name.setText(value.name + (value.locked ? " 🔒 (비밀방)" : ""));
+//            this.selected = isSelected;
+//            this.locked = value.locked;
 //
-//            // 🎨 비밀방이면 주황색으로 강조
-//            if (value.locked) {
-//                name.setForeground(PRIMARY);  // 주황색으로 표시
-//            } else {
-//                name.setForeground(TEXT_PRIMARY);  // 일반 색상
-//            }
+//            // 방 이름 + 자물쇠 아이콘
+//            icon.setText(value.locked ? "🔒" : "💬");
+//            name.setText(value.name);
+//
+//            // "3/10명 · 활성" 같은 서브텍스트
 //            sub.setText(value.toCounter());
 //
-//            status.setText(value.active ? "● 활성" : "○ 비활성");
-//            status.setForeground(value.active ? PRIMARY : new Color(120, 130, 140));
+//            // 상태 텍스트
+//            status.setText(value.active ? "LIVE" : "대기");
+//            status.setForeground(value.active ? PRIMARY : new Color(160, 160, 160));
 //
-//            // 입장 버튼 액션 재설정
+//            // 공개/비밀 뱃지
+//            if (value.locked) {
+//                badgeLock.setText("비밀방");
+//                badgeLock.setForeground(new Color(190, 120, 80));
+//                badgeLock.setOpaque(true);
+//                badgeLock.setBackground(new Color(255, 241, 231));
+//            } else {
+//                badgeLock.setText("공개방");
+//                badgeLock.setForeground(new Color(88, 101, 242));
+//                badgeLock.setOpaque(true);
+//                badgeLock.setBackground(new Color(235, 240, 255));
+//            }
+//
+//            // 인원 뱃지
+//            badgeCount.setText(value.participants + " / " + value.capacity + "명");
+//            badgeCount.setForeground(new Color(90, 98, 110));
+//            badgeCount.setOpaque(true);
+//            badgeCount.setBackground(new Color(245, 247, 250));
+//
+//            // 입장 버튼 액션 (기존 로직 그대로)
 //            for (ActionListener al : joinBtn.getActionListeners()) {
 //                joinBtn.removeActionListener(al);
 //            }
@@ -1044,7 +1277,7 @@
 //                joinSelected();
 //            });
 //
-//            // 삭제 버튼 액션 재설정
+//            // 삭제 버튼 액션 (기존 로직 그대로)
 //            for (ActionListener al : deleteBtn.getActionListeners()) {
 //                deleteBtn.removeActionListener(al);
 //            }
@@ -1062,18 +1295,6 @@
 //                }
 //            });
 //
-//            if (isSelected) {
-//                setBackground(ACCENT_LIGHT);
-//            } else {
-//                // 🎨 비밀방이면 연한 주황색 배경
-//                if (value.locked) {
-//                    setBackground(new Color(255, 245, 235));  // 연한 주황색
-//                } else {
-//                    setBackground(index % 2 == 0 ? Color.WHITE : new Color(252, 252, 252));
-//                }
-//            }
-//
-//            setOpaque(true);
 //            return this;
 //        }
 //    }
@@ -1097,11 +1318,29 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * RoomListFrame - 채팅방 목록 화면
  */
 public class RoomListFrame extends JFrame implements ChatClient.MessageListener {
+
+    // HashMap은 수신스레드/EDT 동시 접근 위험 -> ConcurrentHashMap 추천
+    private final Map<String, ChatFrame> openChatFrames = new ConcurrentHashMap<>();
+
+    // 현재 포커스/활성 채팅창 추적
+    private volatile ChatFrame activeChatFrame = null;
+
+    private Component getPopupParent() {
+        ChatFrame a = activeChatFrame;
+        if (a != null && a.isShowing()) return a;
+
+        // 활성창이 없으면 아무 채팅창이라도 하나
+        for (ChatFrame f : openChatFrames.values()) {
+            if (f != null && f.isShowing()) return f;
+        }
+        return this; // 채팅창이 없으면 목록이 부모
+    }
 
     // ========== 색상 팔레트 ==========
     private static final Color PRIMARY = new Color(255, 159, 64);
@@ -1120,7 +1359,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
     private JLabel lblOnlineUsers;
     private JLabel lblActiveChats;
 
-    private DefaultListModel<RoomDto> model = new DefaultListModel<>();
+    private final DefaultListModel<RoomDto> model = new DefaultListModel<>();
     private JList<RoomDto> roomList;
     private JButton btnCreate;
     private JButton btnRefresh;
@@ -1131,12 +1370,9 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
     private final List<String> passthroughLog = new CopyOnWriteArrayList<>();
 
     // 🔧 게임 메시지 버퍼
-    private List<String> gameMessageBuffer = new CopyOnWriteArrayList<>();
+    private final List<String> gameMessageBuffer = new CopyOnWriteArrayList<>();
 
-    // 여러 방 한번에 열 수 있게
-    private Map<String, ChatFrame> openChatFrames = new HashMap<>();
-
-    // 🔑 비밀방 입장 대기 상태 (추가)
+    // 🔑 비밀방 입장 대기 상태
     private String pendingRoomJoin = null;
     private String pendingRoomPassword = null;
 
@@ -1159,7 +1395,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         setContentPane(mainPanel);
     }
 
-    // ========== 헤더 영역 ==========
     // ========== 헤더 영역 ==========
     private JComponent buildHeader() {
         JPanel header = new RoundedPanel(18);
@@ -1321,12 +1556,11 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         roomList = new JList<>(model);
         roomList.setCellRenderer(new RoomRenderer());
         roomList.setBackground(new Color(250, 250, 250));
-        roomList.setSelectionBackground(new Color(255, 244, 233)); // 살짝 주황빛 하이라이트
+        roomList.setSelectionBackground(new Color(255, 244, 233));
         roomList.setSelectionForeground(TEXT_PRIMARY);
         roomList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         roomList.setFixedCellHeight(80);
 
-        // (기존 더블클릭/입장/삭제 로직 그대로 유지)
         roomList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -1339,8 +1573,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 int relX = e.getX() - cell.x;
                 int w = cell.width;
 
-                // 마지막 50px: 삭제 버튼
-                if (relX > w - 50) {
+                if (relX > w - 50) { // 삭제 버튼
                     RoomDto r = model.get(index);
                     int res = JOptionPane.showConfirmDialog(
                             RoomListFrame.this,
@@ -1355,14 +1588,12 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                     return;
                 }
 
-                // 그 앞 100px: 입장 버튼
-                if (relX > w - 150) {
+                if (relX > w - 150) { // 입장 버튼
                     roomList.setSelectedIndex(index);
                     joinSelected();
                     return;
                 }
 
-                // 나머지 영역 더블클릭 → 입장
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     roomList.setSelectedIndex(index);
                     joinSelected();
@@ -1409,7 +1640,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
     private JButton createActionButton(String text, boolean isPrimary) {
         JButton btn = new JButton() {
             private boolean hover = false;
-            private String buttonText = text;
+            private final String buttonText = text;
 
             {
                 addMouseListener(new MouseAdapter() {
@@ -1432,20 +1663,16 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-                if (isPrimary) {
-                    g2.setColor(hover ? PRIMARY_HOVER : PRIMARY);
-                } else {
-                    g2.setColor(hover ? ACCENT_LIGHT : new Color(247, 249, 252));
-                }
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                if (isPrimary) g2.setColor(hover ? PRIMARY_HOVER : PRIMARY);
+                else g2.setColor(hover ? ACCENT_LIGHT : new Color(247, 249, 252));
 
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
                 g2.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.BOLD, 13));
                 g2.setColor(isPrimary ? Color.WHITE : TEXT_PRIMARY);
 
                 FontMetrics fm = g2.getFontMetrics();
                 int textWidth = fm.stringWidth(buttonText);
                 int textHeight = fm.getAscent();
-
                 int x = (getWidth() - textWidth) / 2;
                 int y = (getHeight() + textHeight) / 2 - 2;
 
@@ -1470,7 +1697,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
 
     // ========== 방 만들기 다이얼로그 ==========
     void showCreateDialog() {
-        // ====== 입력 컴포넌트 생성 (기존 로직 그대로) ======
         JTextField tfName = new JTextField();
         tfName.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
 
@@ -1480,34 +1706,30 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         JCheckBox ckLock = new JCheckBox("비밀방 (잠금)");
         ckLock.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 13));
 
-        // 🔑 비밀번호 입력 필드
         JLabel lblPassword = new JLabel("비밀번호 (4자리 숫자)");
         lblPassword.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 13));
-        lblPassword.setVisible(false);  // 처음엔 숨김
+        lblPassword.setVisible(false);
 
-        JTextField tfPassword = new JTextField();  // 숫자만 입력되도록 제한
+        JTextField tfPassword = new JTextField();
         tfPassword.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
-        tfPassword.setVisible(false);  // 처음엔 숨김
+        tfPassword.setVisible(false);
 
-        // 숫자 4자리만 입력 가능하도록 제한 (기존 로직 그대로)
         tfPassword.setDocument(new javax.swing.text.PlainDocument() {
             @Override
             public void insertString(int offs, String str, javax.swing.text.AttributeSet a)
                     throws javax.swing.text.BadLocationException {
                 if (str == null) return;
-                // 숫자만 허용 & 4자리까지만
                 if ((getLength() + str.length() <= 4) && str.matches("[0-9]+")) {
                     super.insertString(offs, str, a);
                 }
             }
         });
 
-        // 체크박스 상태에 따라 비밀번호 필드 표시/숨김 (기존 로직 그대로)
         ckLock.addActionListener(e -> {
             boolean checked = ckLock.isSelected();
             lblPassword.setVisible(checked);
             tfPassword.setVisible(checked);
-            tfPassword.setText("");  // 체크 해제 시 비밀번호 초기화
+            tfPassword.setText("");
 
             java.awt.Window win = SwingUtilities.getWindowAncestor(ckLock);
             if (win != null) {
@@ -1516,7 +1738,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             }
         });
 
-        // ====== 레이아웃: 카드 스타일 다이얼로그 ======
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(BG_COLOR);
         root.setBorder(new EmptyBorder(10, 10, 10, 10));
@@ -1526,7 +1747,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         card.setLayout(new BorderLayout(0, 16));
         card.setBorder(new EmptyBorder(16, 20, 16, 20));
 
-        // --- 상단 헤더 영역 ---
         JPanel header = new JPanel();
         header.setOpaque(false);
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
@@ -1543,12 +1763,10 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         header.add(Box.createVerticalStrut(4));
         header.add(subtitle);
 
-        // --- 폼 영역 ---
         JPanel form = new JPanel();
         form.setOpaque(false);
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
 
-        // 방 이름
         JLabel lblName = new JLabel("방 이름");
         lblName.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 13));
 
@@ -1563,7 +1781,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         form.add(tfName);
         form.add(Box.createVerticalStrut(12));
 
-        // 정원
         JLabel lblCap = new JLabel("정원");
         lblCap.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 13));
 
@@ -1592,12 +1809,10 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         form.add(capRow);
         form.add(Box.createVerticalStrut(12));
 
-        // 비밀방 체크
         ckLock.setOpaque(false);
         form.add(ckLock);
         form.add(Box.createVerticalStrut(6));
 
-        // 비밀번호 영역 (레이블 + 필드 가로 배치)
         JPanel pwRow = new JPanel(new BorderLayout(8, 0));
         pwRow.setOpaque(false);
 
@@ -1609,16 +1824,15 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
 
         pwRow.add(lblPassword, BorderLayout.WEST);
         pwRow.add(tfPassword, BorderLayout.CENTER);
-
         form.add(pwRow);
 
-        // --- 하단 안내 문구 ---
         JLabel hint = new JLabel("• 비밀방을 선택하면 4자리 숫자 비밀번호가 필요해요.");
         hint.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
         hint.setForeground(new Color(160, 168, 178));
 
         card.add(header, BorderLayout.NORTH);
         card.add(form, BorderLayout.CENTER);
+
         JPanel hintWrapper = new JPanel(new BorderLayout());
         hintWrapper.setOpaque(false);
         hintWrapper.setBorder(new EmptyBorder(4, 0, 0, 0));
@@ -1627,7 +1841,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
 
         root.add(card, BorderLayout.CENTER);
 
-        // ====== 다이얼로그 표시 (확인 버튼/취소 버튼 로직 그대로) ======
         int ok = JOptionPane.showConfirmDialog(
                 this,
                 root,
@@ -1640,12 +1853,11 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             String name = tfName.getText().trim();
             int cap = (Integer) spCap.getValue();
             boolean lock = ckLock.isSelected();
-            String password = tfPassword.getText().trim();  // 🔑 비밀번호 가져오기
+            String password = tfPassword.getText().trim();
 
-            // 🔒 비밀방인데 비밀번호가 4자리가 아니면 경고 (기존 로직 그대로)
             if (lock && password.length() != 4) {
                 JOptionPane.showMessageDialog(
-                        this,
+                        getPopupParent(), // ✅ 채팅창이 열려있으면 채팅창 위로
                         "비밀번호는 4자리 숫자여야 합니다.",
                         "입력 오류",
                         JOptionPane.WARNING_MESSAGE
@@ -1654,7 +1866,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             }
 
             if (!name.isEmpty() && client != null) {
-                // 🔑 비밀번호를 포함해서 서버에 전송 (기존 프로토콜 그대로)
                 String lockStatus = lock ? "lock" : "open";
                 String cmd = lock
                         ? String.format("%s %s %d %s %s", Constants.CMD_ROOM_CREATE, name, cap, lockStatus, password)
@@ -1671,51 +1882,44 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         RoomDto r = roomList.getSelectedValue();
         if (r == null || client == null) return;
 
-        // 이미 열린 방이면 앞으로
+        // 이미 열린 방이면 앞으로 (+ active 갱신)
         if (openChatFrames.containsKey(r.name)) {
             ChatFrame existingChat = openChatFrames.get(r.name);
+            activeChatFrame = existingChat;
             existingChat.toFront();
             existingChat.requestFocus();
             return;
         }
 
-        // 🔒 비밀방이면 비밀번호 입력 다이얼로그 표시
         if (r.locked) {
             String inputPassword = showPasswordDialog();
+            if (inputPassword == null) return;
 
-            // 취소를 누른 경우
-            if (inputPassword == null) {
-                return;
-            }
-
-            // 4자리가 아니면 경고
             if (inputPassword.length() != 4) {
-                JOptionPane.showMessageDialog(this,
+                JOptionPane.showMessageDialog(
+                        getPopupParent(),
                         "비밀번호는 4자리 숫자입니다.",
                         "입력 오류",
-                        JOptionPane.WARNING_MESSAGE);
+                        JOptionPane.WARNING_MESSAGE
+                );
                 return;
             }
 
-            // 🔑 비밀번호 포함해서 입장 명령 전송 (ChatFrame은 서버 응답 후 생성)
             client.sendMessage(Constants.CMD_JOIN_ROOM + " " + r.name + " " + inputPassword);
 
-            // 🎯 임시로 "입장 시도 중" 상태 저장 (서버 응답 대기)
             pendingRoomJoin = r.name;
             pendingRoomPassword = inputPassword;
         } else {
-            // 일반 방은 바로 입장
             client.sendMessage(Constants.CMD_JOIN_ROOM + " " + r.name);
-
-            // 일반 방은 바로 ChatFrame 생성
             openChatFrameForRoom(r);
         }
     }
 
-    // 🎯 방 입장 성공 시 ChatFrame 열기
+    // 방 입장 성공 시 ChatFrame 열기
     private void openChatFrameForRoom(RoomDto r) {
         if (openChatFrames.containsKey(r.name)) {
             ChatFrame existingChat = openChatFrames.get(r.name);
+            activeChatFrame = existingChat;
             existingChat.toFront();
             existingChat.requestFocus();
             return;
@@ -1724,25 +1928,29 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         ChatFrame chat = new ChatFrame(nickname, serverLabel + " · " + r.name, this);
         openChatFrames.put(r.name, chat);
 
+        // ✅ 활성 채팅창 추적
+        activeChatFrame = chat;
+        chat.addWindowFocusListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowGainedFocus(java.awt.event.WindowEvent e) {
+                activeChatFrame = chat;
+            }
+        });
+
         chat.updateMemberCount(r.participants);
         chat.bind(client);
 
-        for (String line : passthroughLog) {
-            chat.onMessageReceived(line);
-        }
+        for (String line : passthroughLog) chat.onMessageReceived(line);
         passthroughLog.clear();
 
-        System.out.println("[RoomListFrame] 📤 게임 버퍼 크기: " + gameMessageBuffer.size());
-        for (String gameLine : gameMessageBuffer) {
-            System.out.println("[RoomListFrame] 📤 ChatFrame에 전달: " + gameLine);
-            chat.onMessageReceived(gameLine);
-        }
+        for (String gameLine : gameMessageBuffer) chat.onMessageReceived(gameLine);
         gameMessageBuffer.clear();
 
         chat.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosed(java.awt.event.WindowEvent e) {
                 openChatFrames.remove(r.name);
+                if (activeChatFrame == chat) activeChatFrame = null;
             }
         });
 
@@ -1760,7 +1968,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         JTextField tfPassword = new JTextField();
         tfPassword.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
 
-        // 숫자 4자리만 입력 가능하도록 제한
         tfPassword.setDocument(new javax.swing.text.PlainDocument() {
             @Override
             public void insertString(int offs, String str, javax.swing.text.AttributeSet a)
@@ -1776,17 +1983,15 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         panel.add(tfPassword);
 
         int result = JOptionPane.showConfirmDialog(
-                this,
+                getPopupParent(), // ✅ 채팅창이 열려있으면 채팅창 위로
                 panel,
                 "🔒 비밀방 입장",
                 JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.PLAIN_MESSAGE
         );
 
-        if (result == JOptionPane.OK_OPTION) {
-            return tfPassword.getText().trim();
-        }
-        return null;  // 취소를 누른 경우
+        if (result == JOptionPane.OK_OPTION) return tfPassword.getText().trim();
+        return null;
     }
 
     // ========== ChatClient 바인딩 ==========
@@ -1824,23 +2029,18 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         }
 
         // 시스템 메시지
-        // 시스템 메시지
         if (line.startsWith("[System] ")) {
             String message = line.substring("[System] ".length()).trim();
             System.out.println("[RoomListFrame System] " + message);
 
             // 🔒 비밀번호 오류 처리
             if (message.contains("비밀번호가 틀렸습니다") || message.contains("비밀번호 불일치")) {
-                SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(
-                            RoomListFrame.this,
-                            "비밀번호가 틀렸습니다.",
-                            "입장 실패",
-                            JOptionPane.ERROR_MESSAGE
-                    );
-                });
-
-                // 대기 상태 초기화
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
+                        getPopupParent(), // ✅ 부모를 채팅창으로
+                        "비밀번호가 틀렸습니다.",
+                        "입장 실패",
+                        JOptionPane.ERROR_MESSAGE
+                ));
                 pendingRoomJoin = null;
                 pendingRoomPassword = null;
                 return;
@@ -1850,7 +2050,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             if (message.contains("입장하였습니다") && pendingRoomJoin != null) {
                 String roomName = pendingRoomJoin;
 
-                // 방 정보 찾기
                 RoomDto targetRoom = null;
                 for (int i = 0; i < model.getSize(); i++) {
                     RoomDto r = model.getElementAt(i);
@@ -1861,63 +2060,45 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 }
 
                 if (targetRoom != null) {
-                    final RoomDto finalRoom = targetRoom;
-                    SwingUtilities.invokeLater(() -> {
-                        openChatFrameForRoom(finalRoom);
-                    });
+                    RoomDto finalRoom = targetRoom;
+                    SwingUtilities.invokeLater(() -> openChatFrameForRoom(finalRoom));
                 }
 
-                // 대기 상태 초기화
                 pendingRoomJoin = null;
                 pendingRoomPassword = null;
 
-                // 열린 모든 ChatFrame에도 전달
-                for (ChatFrame frame : openChatFrames.values()) {
-                    frame.onMessageReceived(line);
-                }
+                for (ChatFrame frame : openChatFrames.values()) frame.onMessageReceived(line);
                 return;
             }
 
-            // 🔔 기타 시스템 메시지는 모달 알림
+            // 🔔 기타 시스템 메시지: 팝업 parent를 "활성 ChatFrame"으로 (목록이 앞으로 안 튐)
             SwingUtilities.invokeLater(() -> {
                 int type = (message.contains("실패") || message.contains("권한") || message.contains("없습니다"))
                         ? JOptionPane.WARNING_MESSAGE
                         : JOptionPane.INFORMATION_MESSAGE;
 
                 JOptionPane.showMessageDialog(
-                        RoomListFrame.this,
+                        getPopupParent(), // ✅ RoomListFrame.this -> getPopupParent()
                         message,
                         "시스템 알림",
                         type
                 );
             });
 
-            // 열린 모든 ChatFrame에도 그대로 전달
-            for (ChatFrame frame : openChatFrames.values()) {
-                frame.onMessageReceived(line);
-            }
+            for (ChatFrame frame : openChatFrames.values()) frame.onMessageReceived(line);
             return;
         }
 
         // 구규격 게임 메시지
         if (line.startsWith("[GAME]")) {
-            for (ChatFrame frame : openChatFrames.values()) {
-                frame.onMessageReceived(line);
-            }
-            if (openChatFrames.isEmpty()) {
-                gameMessageBuffer.add(line);
-            }
+            for (ChatFrame frame : openChatFrames.values()) frame.onMessageReceived(line);
+            if (openChatFrames.isEmpty()) gameMessageBuffer.add(line);
             return;
         }
 
         // 일반 채팅
-        for (ChatFrame frame : openChatFrames.values()) {
-            frame.onMessageReceived(line);
-        }
-
-        if (openChatFrames.isEmpty()) {
-            passthroughLog.add(line);
-        }
+        for (ChatFrame frame : openChatFrames.values()) frame.onMessageReceived(line);
+        if (openChatFrames.isEmpty()) passthroughLog.add(line);
     }
 
     @Override
@@ -1925,7 +2106,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         SwingUtilities.invokeLater(() -> {
             if (lblStatusIcon != null) lblStatusIcon.setIcon(makeStatusIcon(Color.RED));
             if (lblStatusText != null) lblStatusText.setText("연결 끊김");
-            JOptionPane.showMessageDialog(this, "서버 연결이 끊겼습니다.", "연결 종료",
+            JOptionPane.showMessageDialog(getPopupParent(), "서버 연결이 끊겼습니다.", "연결 종료",
                     JOptionPane.WARNING_MESSAGE);
             dispose();
         });
@@ -1949,6 +2130,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             List<RoomDto> out = new ArrayList<>();
             String arr = json.trim();
             if (!arr.startsWith("[") || !arr.endsWith("]")) return out;
+
             String body = arr.substring(1, arr.length() - 1).trim();
             if (body.isEmpty()) return out;
 
@@ -1980,6 +2162,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         for (String p : pairs) {
             String[] kv = p.split(":", 2);
             if (kv.length != 2) continue;
+
             String key = kv[0].trim().replaceAll("^\\\"|\\\"$", "");
             String val = kv[1].trim();
 
@@ -2010,14 +2193,8 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
     private Icon makeStatusIcon(Color color) {
         int size = 10;
         return new Icon() {
-            public int getIconWidth() {
-                return size;
-            }
-
-            public int getIconHeight() {
-                return size;
-            }
-
+            public int getIconWidth() { return size; }
+            public int getIconHeight() { return size; }
             public void paintIcon(Component c, Graphics g, int x, int y) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -2040,8 +2217,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 fontStream.close();
                 return derivedFont;
             }
-        } catch (Exception e) {
-        }
+        } catch (Exception ignored) {}
         return new Font("Dialog", style, size);
     }
 
@@ -2071,8 +2247,8 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         private final JLabel name = new JLabel();
         private final JLabel sub = new JLabel();
         private final JLabel status = new JLabel("● 활성");
-        private final JLabel badgeLock = new JLabel();      // 🔒/공개 뱃지
-        private final JLabel badgeCount = new JLabel();     // 인원 뱃지
+        private final JLabel badgeLock = new JLabel();
+        private final JLabel badgeCount = new JLabel();
         private final JButton joinBtn;
         private final JButton deleteBtn;
 
@@ -2080,12 +2256,10 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         private boolean locked;
 
         public RoomRenderer() {
-            // 🔹 전체 3컬럼 레이아웃: 왼쪽 / 가운데 / 오른쪽
             setLayout(new BorderLayout(16, 0));
             setBorder(new EmptyBorder(8, 16, 8, 16));
             setOpaque(false);
 
-            /* ---------- LEFT : 아이콘 + 공개방/인원수 ---------- */
             JPanel leftCol = new JPanel();
             leftCol.setOpaque(false);
             leftCol.setLayout(new BoxLayout(leftCol, BoxLayout.Y_AXIS));
@@ -2112,7 +2286,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             leftCol.add(Box.createVerticalStrut(6));
             leftCol.add(badgeRow);
 
-            /* ---------- CENTER : 방 제목 + 서브텍스트 ---------- */
             JPanel centerCol = new JPanel();
             centerCol.setOpaque(false);
             centerCol.setLayout(new BoxLayout(centerCol, BoxLayout.Y_AXIS));
@@ -2131,50 +2304,40 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             centerCol.add(Box.createVerticalStrut(4));
             centerCol.add(sub);
 
-            /* ---------- RIGHT : 상태 + 버튼들 ---------- */
             JPanel rightCol = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
             rightCol.setOpaque(false);
 
             status.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 11));
             status.setPreferredSize(new Dimension(56, 20));
 
-            joinBtn   = createSmallButton("입장");
+            joinBtn = createSmallButton("입장");
             deleteBtn = createDeleteButton("삭제");
 
             rightCol.add(status);
             rightCol.add(joinBtn);
             rightCol.add(deleteBtn);
 
-            /* 🔥 여기서부터: 세로 가운데 정렬을 위한 래퍼들 */
-
-            // 왼쪽(아이콘/뱃지) 세로 가운데 + 좌측 정렬
             JPanel leftWrapper = new JPanel(new GridBagLayout());
             leftWrapper.setOpaque(false);
             GridBagConstraints gbcLeft = new GridBagConstraints();
-            gbcLeft.gridx = 0;
-            gbcLeft.gridy = 0;
-            gbcLeft.anchor = GridBagConstraints.WEST;   // 가로는 왼쪽, 세로는 가운데
+            gbcLeft.gridx = 0; gbcLeft.gridy = 0;
+            gbcLeft.anchor = GridBagConstraints.WEST;
             leftWrapper.add(leftCol, gbcLeft);
 
-            // 가운데(방 제목) 세로 가운데
             JPanel centerWrapper = new JPanel(new GridBagLayout());
             centerWrapper.setOpaque(false);
             GridBagConstraints gbcCenter = new GridBagConstraints();
-            gbcCenter.gridx = 0;
-            gbcCenter.gridy = 0;
+            gbcCenter.gridx = 0; gbcCenter.gridy = 0;
             gbcCenter.anchor = GridBagConstraints.CENTER;
             centerWrapper.add(centerCol, gbcCenter);
 
-            // 오른쪽(상태+버튼) 세로 가운데 + 우측 정렬
             JPanel rightWrapper = new JPanel(new GridBagLayout());
             rightWrapper.setOpaque(false);
             GridBagConstraints gbcRight = new GridBagConstraints();
-            gbcRight.gridx = 0;
-            gbcRight.gridy = 0;
-            gbcRight.anchor = GridBagConstraints.EAST;  // 가로는 오른쪽, 세로는 가운데
+            gbcRight.gridx = 0; gbcRight.gridy = 0;
+            gbcRight.anchor = GridBagConstraints.EAST;
             rightWrapper.add(rightCol, gbcRight);
 
-            // BorderLayout에 래퍼들을 배치
             add(leftWrapper, BorderLayout.WEST);
             add(centerWrapper, BorderLayout.CENTER);
             add(rightWrapper, BorderLayout.EAST);
@@ -2209,7 +2372,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                     Color base = PRIMARY;
                     if (!isEnabled()) base = new Color(200, 200, 200);
                     else if (btnPressed) base = new Color(255, 120, 20);
-                    else if (btnHover)  base = PRIMARY_HOVER;
+                    else if (btnHover) base = PRIMARY_HOVER;
 
                     int offsetY = btnPressed ? 1 : 0;
                     g2.translate(0, offsetY);
@@ -2232,7 +2395,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             return btn;
         }
 
-        // 🔴 삭제 버튼 (텍스트 "삭제" + 빨간 배경)
         private JButton createDeleteButton(String text) {
             JButton btn = new JButton(text) {
                 private boolean hover = false;
@@ -2262,9 +2424,9 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                     g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
                     Color base;
-                    if (pressed)      base = new Color(220, 38, 38);
-                    else if (hover)   base = new Color(248, 113, 113);
-                    else              base = new Color(239, 68, 68);
+                    if (pressed) base = new Color(220, 38, 38);
+                    else if (hover) base = new Color(248, 113, 113);
+                    else base = new Color(239, 68, 68);
 
                     g2.setColor(base);
                     g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
@@ -2282,31 +2444,24 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 }
             };
 
-            btn.setPreferredSize(new Dimension(64, 30));   // 넉넉하게
+            btn.setPreferredSize(new Dimension(64, 30));
             return btn;
         }
 
-
         @Override
         protected void paintComponent(Graphics g) {
-            // 셀 전체를 하나의 카드처럼
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             Color cardBg;
-            if (selected) {
-                cardBg = new Color(255, 244, 233); // 선택 시
-            } else if (locked) {
-                cardBg = new Color(255, 247, 239); // 비밀방 살짝 강조
-            } else {
-                cardBg = Color.WHITE;
-            }
+            if (selected) cardBg = new Color(255, 244, 233);
+            else if (locked) cardBg = new Color(255, 247, 239);
+            else cardBg = Color.WHITE;
 
             int arc = 16;
             g2.setColor(cardBg);
             g2.fillRoundRect(4, 4, getWidth() - 8, getHeight() - 8, arc, arc);
 
-            // 살짝 그림자 느낌
             g2.setColor(new Color(0, 0, 0, 10));
             g2.drawRoundRect(4, 4, getWidth() - 8, getHeight() - 8, arc, arc);
 
@@ -2320,18 +2475,13 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             this.selected = isSelected;
             this.locked = value.locked;
 
-            // 방 이름 + 자물쇠 아이콘
             icon.setText(value.locked ? "🔒" : "💬");
             name.setText(value.name);
-
-            // "3/10명 · 활성" 같은 서브텍스트
             sub.setText(value.toCounter());
 
-            // 상태 텍스트
             status.setText(value.active ? "LIVE" : "대기");
             status.setForeground(value.active ? PRIMARY : new Color(160, 160, 160));
 
-            // 공개/비밀 뱃지
             if (value.locked) {
                 badgeLock.setText("비밀방");
                 badgeLock.setForeground(new Color(190, 120, 80));
@@ -2344,29 +2494,22 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 badgeLock.setBackground(new Color(235, 240, 255));
             }
 
-            // 인원 뱃지
             badgeCount.setText(value.participants + " / " + value.capacity + "명");
             badgeCount.setForeground(new Color(90, 98, 110));
             badgeCount.setOpaque(true);
             badgeCount.setBackground(new Color(245, 247, 250));
 
-            // 입장 버튼 액션 (기존 로직 그대로)
-            for (ActionListener al : joinBtn.getActionListeners()) {
-                joinBtn.removeActionListener(al);
-            }
+            for (ActionListener al : joinBtn.getActionListeners()) joinBtn.removeActionListener(al);
             joinBtn.addActionListener(e -> {
                 roomList.setSelectedIndex(index);
                 joinSelected();
             });
 
-            // 삭제 버튼 액션 (기존 로직 그대로)
-            for (ActionListener al : deleteBtn.getActionListeners()) {
-                deleteBtn.removeActionListener(al);
-            }
+            for (ActionListener al : deleteBtn.getActionListeners()) deleteBtn.removeActionListener(al);
             deleteBtn.setToolTipText("방 삭제");
             deleteBtn.addActionListener(e -> {
                 int res = JOptionPane.showConfirmDialog(
-                        RoomListFrame.this,
+                        getPopupParent(), // 채팅창이 열려있으면 채팅창 위로
                         "'" + value.name + "' 방을 삭제하시겠습니까?",
                         "방 삭제",
                         JOptionPane.OK_CANCEL_OPTION,
