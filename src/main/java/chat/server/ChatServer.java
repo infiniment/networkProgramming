@@ -11,7 +11,7 @@ public class ChatServer {
     private final ConcurrentHashMap<String, ClientHandler> sessions = new ConcurrentHashMap<>();
     private final RoomManager roomManager;
     private final OmokGameManager gameManager;
-    private final BR31GameManager br31GameManager;  // ✅ 추가!
+    private final BR31GameManager br31GameManager;  //  추가!
     private ServerSocket serverSocket;
     private final UserDirectory userDirectory = new UserDirectory();
 
