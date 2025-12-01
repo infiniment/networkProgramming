@@ -293,22 +293,29 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         dispose();
     }
 
-    // 🔧 플레이어 정보 업데이트 메서드
     private void updatePlayerInfo() {
-        boolean iAmHost = myNickname.compareTo(opponentNickname) < 0;
-
-        if (iAmHost) {
+        // 상대 닉네임이 아직 안 온 경우
+        if (opponentNickname == null || opponentNickname.isEmpty()) {
             lblBlackPlayer.setText("■ " + myNickname);
+            lblWhitePlayer.setText("□ -");
             lblBlackPlayer.setForeground(TEXT_PRIMARY);
-            lblWhitePlayer.setText("□ " + opponentNickname);
             lblWhitePlayer.setForeground(TEXT_PRIMARY);
+            return;
+        }
+
+        // myColor: 1 = 흑(호스트), 2 = 백(게스트)
+        if (myColor == 1) {
+            lblBlackPlayer.setText("■ " + myNickname);
+            lblWhitePlayer.setText("□ " + opponentNickname);
         } else {
             lblBlackPlayer.setText("■ " + opponentNickname);
-            lblBlackPlayer.setForeground(TEXT_PRIMARY);
             lblWhitePlayer.setText("□ " + myNickname);
-            lblWhitePlayer.setForeground(TEXT_PRIMARY);
         }
+
+        lblBlackPlayer.setForeground(TEXT_PRIMARY);
+        lblWhitePlayer.setForeground(TEXT_PRIMARY);
     }
+
 
     // 🔧 현재 턴 업데이트 메서드
     private void updateCurrentTurn() {
@@ -346,85 +353,59 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
     public void onMessageReceived(String line) {
         System.out.println("[OMOK FRAME] 수신: " + line);
 
-        // 게임 시작
+        // 1) 게임 시작 - 상대 닉네임 설정만 담당
         if (line.startsWith(Constants.RESPONSE_GAME_START) || line.startsWith("@game:start")) {
             String opponentName = line.replace(Constants.RESPONSE_GAME_START, "")
                     .replace("@game:start", "")
                     .trim();
 
             SwingUtilities.invokeLater(() -> {
-                gameStarted = true;
                 opponentNickname = opponentName;
+                gameStarted = true;
 
-                boolean iAmHost = myNickname.compareTo(opponentNickname) < 0;
-                myColor = iAmHost ? 1 : 2;
-                opponentColor = iAmHost ? 2 : 1;
-
-                updatePlayerInfo();
-
-                // ✅ 초기 턴 설정
-                gamePanel.setCurrentPlayer(1);  // 항상 흑돌(1)이 먼저
                 gamePanel.setOpponentNickname(opponentNickname);
-                gamePanel.setGameEnabled(iAmHost);  // 호스트만 활성화
-                gamePanel.setMyTurn(iAmHost);
-
+                updatePlayerInfo();
                 updateCurrentTurn();
                 gamePanel.repaint();
-
-                System.out.println("[OMOK] ✅ 게임 시작 - myColor=" + myColor);
             });
             return;
         }
 
-//        if (line.startsWith("@game:move")) {
-//            String[] parts = line.substring("@game:move".length()).trim().split(" ");
-//            if (parts.length >= 3) {
-//                try {
-//                    int row = Integer.parseInt(parts[0]);
-//                    int col = Integer.parseInt(parts[1]);
-//                    int player = Integer.parseInt(parts[2]);
-//
-//                    SwingUtilities.invokeLater(() -> {
-//                        System.out.println("[OMOK] 돌 배치: (" + row + "," + col + ") 색상=" + player);
-//
-//                        // 돌 놓기
-//                        gamePanel.placeStone(row, col, player);
-//
-//                        // 승리 체크
-//                        if (gamePanel.checkWinAt(row, col, player)) {
-//                            gamePanel.setGameOver(true);
-//                            gamePanel.setWinnerColor(player);
-//                            updateStatus();
-//                            gamePanel.repaint();
-//                            return;
-//                        }
-//
-//                        // ✅ 턴 변경
-//                        gamePanel.changeTurn();
-//
-//                        // ✅ 내 턴이면 활성화
-//                        int nextTurn = gamePanel.getCurrentPlayer();
-//                        boolean myTurnNow = (nextTurn == myColor);
-//
-//                        // 🔧 디버그 로그 추가
-//                        System.out.println("[OMOK] 턴 확인: nextTurn=" + nextTurn +
-//                                ", myColor=" + myColor +
-//                                ", myTurnNow=" + myTurnNow);
-//
-//                        gamePanel.setGameEnabled(myTurnNow);
-//                        gamePanel.setMyTurn(myTurnNow);
-//
-//                        updateStatus();
-//                        gamePanel.repaint();
-//                    });
-//                } catch (NumberFormatException e) {
-//                    System.err.println("돌 놓기 파싱 오류: " + line);
-//                }
-//            }
-//            return;
-//        }
+        // 2) 내 색/첫 턴 정보 (@game:turn 1 또는 2)
+        if (line.startsWith("@game:turn")) {
+            String value = line.substring("@game:turn".length()).trim();
+            try {
+                int turn = Integer.parseInt(value); // 1 또는 2
 
-        // 돌 놓기
+                SwingUtilities.invokeLater(() -> {
+                    // 서버 기준: 1 = 호스트(흑), 2 = 게스트(백)
+                    boolean iAmHost = (turn == 1);
+                    myColor = iAmHost ? 1 : 2;
+                    opponentColor = iAmHost ? 2 : 1;
+
+                    gameStarted = true;
+
+                    // 항상 흑돌(1)이 먼저 시작
+                    gamePanel.setCurrentPlayer(1);
+
+                    // 흑돌이면 첫 턴, 백돌이면 기다리기
+                    boolean myTurnNow = (myColor == 1);
+                    gamePanel.setGameEnabled(myTurnNow);
+                    gamePanel.setMyTurn(myTurnNow);
+
+                    updatePlayerInfo();
+                    updateCurrentTurn();
+                    gamePanel.repaint();
+
+                    System.out.println("[OMOK] ✅ 게임 시작 - myColor=" + myColor + ", myTurn=" + myTurnNow);
+                });
+            } catch (NumberFormatException e) {
+                System.err.println("[OMOK] @game:turn 파싱 오류: " + line);
+            }
+            return;
+        }
+
+        // 3) 돌 놓기 (@game:move row col player)
         if (line.startsWith("@game:move")) {
             String[] parts = line.substring("@game:move".length()).trim().split(" ");
             if (parts.length >= 3) {
@@ -436,10 +417,10 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
                     SwingUtilities.invokeLater(() -> {
                         System.out.println("[OMOK] 돌 배치: (" + row + "," + col + ") 색상=" + player);
 
-                        // ✅ 돌 놓기
+                        // 돌 놓기
                         gamePanel.placeStone(row, col, player);
 
-                        // ✅ 승리 체크
+                        // 승리 체크
                         if (gamePanel.checkWinAt(row, col, player)) {
                             gamePanel.setGameOver(true);
                             gamePanel.setWinnerColor(player);
@@ -448,10 +429,10 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
                             return;
                         }
 
-                        // ✅ 턴 변경
+                        // 턴 변경
                         gamePanel.changeTurn();
 
-                        // ✅ 내 턴이면 활성화
+                        // 내 턴이면 활성화
                         int nextTurn = gamePanel.getCurrentPlayer();
                         boolean myTurnNow = (nextTurn == myColor);
                         gamePanel.setGameEnabled(myTurnNow);
@@ -466,14 +447,13 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
             }
             return;
         }
-    }
+}
 
     @Override
     public void onDisconnected() {
-        SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(this, "서버 연결이 끊어졌습니다.", "연결 종료", JOptionPane.WARNING_MESSAGE);
-            dispose();
-        });
+        // 메인 RoomListFrame 쪽에서만 연결 끊김 알림을 띄우고,
+        // 오목 게임창에서는 조용히 닫기만 한다.
+        SwingUtilities.invokeLater(this::dispose);
     }
 
     public int getMyColor() { return myColor; }

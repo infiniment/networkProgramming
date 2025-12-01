@@ -16,6 +16,7 @@ public class Launcher {
         final String host = "localhost";
         final int port = 5959;
 
+
         // 1) 서버가 이미 떠있는지 확인 (동일 PC에서 여러 번 켤 때 중복 방지)
         boolean alreadyRunning = isPortOpen(host, port, 250);
 

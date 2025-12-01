@@ -41,6 +41,20 @@ public class OmokGamePanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (!gameEnabled || !myTurn) {
+
+                    // ✅ 아직 한 수도 안 둔 상태에서 내가 백돌이면 안내 메시지
+                    if (!gameOver && isBoardEmpty()) {
+                        int myColor = gameFrame.getMyColor();
+                        if (myColor == 2) { // 백돌
+                            JOptionPane.showMessageDialog(
+                                    OmokGamePanel.this,
+                                    "흑돌이 먼저 두어야 합니다!",
+                                    "알림",
+                                    JOptionPane.INFORMATION_MESSAGE
+                            );
+                        }
+                    }
+
                     System.out.println("[OMOK-PANEL] 클릭 무시: gameEnabled=" + gameEnabled +
                             ", myTurn=" + myTurn);
                     return;
@@ -48,7 +62,6 @@ public class OmokGamePanel extends JPanel {
                 handleClick(e.getX(), e.getY());
             }
 
-            // ✅ 마우스가 패널을 벗어날 때
             @Override
             public void mouseExited(MouseEvent e) {
                 hoverRow = -1;
@@ -98,6 +111,18 @@ public class OmokGamePanel extends JPanel {
 
         setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
         initBoard();
+    }
+
+    // 보드에 아직 아무 돌도 없는지 체크
+    private boolean isBoardEmpty() {
+        for (int r = 0; r < BOARD_SIZE; r++) {
+            for (int c = 0; c < BOARD_SIZE; c++) {
+                if (board[r][c] != 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private void initBoard() {

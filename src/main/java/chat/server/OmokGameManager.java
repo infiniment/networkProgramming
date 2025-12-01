@@ -171,24 +171,21 @@ public class OmokGameManager {
 
     // ========== 플레이어 연결 해제 ==========
     public synchronized void handlePlayerDisconnect(String playerNickname) {
-        System.out.println("[GAME] 플레이어 연결 해제: " + playerNickname);
+        System.out.println("[GAME] 🔌 플레이어 연결 해제: " + playerNickname);
 
+        // 대기열에서 제거
         waitQueue.remove(playerNickname);
 
         OmokGameSession session = playerToSession.remove(playerNickname);
         if (session != null) {
+            // 게임 상태만 포기 처리하고 세션 삭제
             session.abandonGame();
             activeSessions.remove(session.getSessionId());
 
-            if (session.host.equals(playerNickname)) {
-                session.opponentHandler.sendMessage("[System] 상대방이 연결을 종료했습니다.");
-            } else {
-                session.hostHandler.sendMessage("[System] 상대방이 연결을 종료했습니다.");
-            }
-
-            System.out.println("[GAME] 세션 삭제: " + session.getSessionId());
+            System.out.println("[GAME] 🗑️ 세션 삭제: " + session.getSessionId());
         }
     }
+
 
     // ========== 타임아웃 정리 ==========
     public void cleanupExpiredSessions() {
