@@ -24,31 +24,74 @@ GUI를 통해 사용자는 서버에 접속하여 채팅방을 생성하거나 �
 
 ---
 
-## ⚙️ 프로젝트 구조 (예시)
+## ⚙️ 프로젝트 구조
 ```
-ChatApp/
-├─ src/main/java/chat/
-│ ├─ server/ # 서버 관련 코드 (팀원 B)
-│ │ ├─ ChatServer.java
-│ │ ├─ ClientHandler.java
-│ │ ├─ RoomManager.java
-│ │ ├─ CommandRouter.java
-│ │ └─ ...
-│ ├─ client/ # 클라이언트 관련 코드 (팀원 A)
-│ │ ├─ ChatClient.java
-│ │ ├─ ui/
-│ │ │ ├─ LoginFrame.java
-│ │ │ ├─ ChatFrame.java
-│ │ │ └─ GamePanel.java
-│ │ ├─ EmojiRenderer.java
-│ │ └─ MiniGame/
-│ │ ├─ OmokGame.java
-│ │ └─ Br31Game.java
-│ ├─ model/ # Message, Room, User 등 데이터 모델
-│ ├─ dao/ # MySQL DAO (MessageDao, RoomDao 등)
-│ └─ util/ # JsonUtil, Db, Logger 등
+networkProgramming/
 ├─ build.gradle
-└─ README.md
+├─ settings.gradle
+├─ README.md
+└─ src/
+└─ main/
+├─ java/
+│ └─ chat/
+│ ├─ Launcher.java / Main.java
+│ │ └─ 실행 진입점(서버 백그라운드 실행 + Swing 로그인 UI 실행)
+│ ├─ ClientMain.java
+│ │ └─ (옵션) 콘솔 기반 클라이언트 실행용
+│ │
+│ ├─ util/
+│ │ ├─ Constants.java
+│ │ │ └─ 사용자 프로토콜(슬래시 명령어/이벤트/@패킷) 상수 정의
+│ │ ├─ JsonEnvelope.java / JsonUtil.java
+│ │ ├─ YamlConfig.java
+│ │ └─ LoggerUtil.java
+│ │
+│ ├─ client/
+│ │ └─ ChatClient.java
+│ │ └─ Socket I/O, 비동기 sendAsync, 수신 리스너 notify
+│ │
+│ ├─ server/
+│ │ ├─ ChatServer.java
+│ │ │ └─ ServerSocket accept 루프, 세션 관리(/to 대상 찾기), 브로드캐스트
+│ │ ├─ ClientHandler.java
+│ │ │ └─ 클라이언트 1명당 스레드, 입력 처리(명령/이모티콘/폭탄), 방 브로드캐스트
+│ │ ├─ CommandRouter.java
+│ │ │ └─ /who, /to(귓속말), /secret on|off, /@ 멘션 등 커맨드 라우팅
+│ │ ├─ RoomManager.java / Room.java / UserDirectory.java
+│ │ ├─ OmokGameManager.java / BR31GameManager.java
+│ │ └─ ChatMessageRepository.java / MemberRepository.java / ChatRoomRepository.java
+│ │
+│ ├─ shared/
+│ │ └─ EmojiRegistry.java
+│ │ └─ :code: ↔ 이미지 경로 매핑, 카테고리 제공
+│ │
+│ └─ ui/
+│ ├─ main/
+│ │ ├─ LoginFrame.java
+│ │ ├─ RoomListFrame.java
+│ │ └─ ClientGuiMain.java
+│ ├─ chat/
+│ │ ├─ ChatFrame.java
+│ │ │ └─ 채팅 UI(이모티콘/폭탄/슬래시 입력), 이벤트 파싱(@bomb/@emoji 등)
+│ │ ├─ OmokGameFrame.java / Br31GameFrame.java
+│ │ └─ OmokGamePanel.java
+│ ├─ chat/panels/
+│ │ └─ EmojiPickerPanel.java
+│ ├─ chat/message/
+│ │ ├─ SecretMessageManager.java
+│ │ └─ BombBubble.java (폭탄 메시지 말풍선 UI 컴포넌트)
+│ ├─ common/
+│ │ ├─ Colors.java / UiUtils.java
+│ │ └─ RoundedPanel.java / RoundedBorder.java / DashedRoundedBorder.java
+│ └─ fonts/
+│ └─ FontManager.java
+│
+└─ resources/
+├─ application.yml
+├─ fonts/ttf/ (BMDOHYEON_ttf.ttf, BMHANNAAir_ttf.ttf)
+└─ images/
+├─ bomb.png / emoji.png / logo.png / background.png ...
+└─ (bear/, coong/, dragon/ 등 이모티콘 카테고리 이미지들)
 ```
 
 

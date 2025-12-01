@@ -37,11 +37,6 @@ public class ClientHandler extends Thread {
         out.println(message); out.flush();
     }
 
-    public void setNickname(String newNick) {
-        server.unregisterSession(this.nickname);
-        this.nickname = newNick;
-        server.registerSession(this.nickname, this);
-    }
 
     @Override
     public void run() {
@@ -56,7 +51,7 @@ public class ClientHandler extends Thread {
             if (nickname == null || nickname.isBlank()) {
                 // 로그만 남기고 정리
                 System.out.println("Client connected but no nickname, closing socket: " + socket);
-                cleanup(); // nickname이 null이어도 안전하게 동작하도록 cleanup 수정 권장(아래 4번)
+                cleanup();
                 return;
             }
 
@@ -171,31 +166,7 @@ public class ClientHandler extends Thread {
         return true;
     }
 
-    // 이모티콘 보내는 로직
-//    private boolean handleMediaPacket(String line) {
-//        boolean roomSecret = currentRoom != null && currentRoom.isSecretActive();
-//        String sid = roomSecret ? currentRoom.currentSecretSid() : null;
-//
-//        if (line.startsWith(Constants.PKG_EMOJI + " ")) {
-//            String code = line.substring((Constants.PKG_EMOJI + " ").length()).trim();
-//            String res  = EmojiRegistry.findEmoji(code);
-//            if (res == null) { sendMessage("[System] 알 수 없는 이모티콘: " + code); return true; }
-//            if (currentRoom == null) { sendMessage("[System] 방에 입장 중이 아닙니다."); return true; }
-//
-//            if (roomSecret) {
-//                currentRoom.broadcast(Constants.EVT_SECRET_MSG + " " + sid + " " + nickname + ": " + code);
-//                broadcastJsonToRoom("emoji.secret", code, /*status*/res, null, null);
-//            } else {
-//                currentRoom.broadcast("[EMOJI] " + nickname + " " + code);
-//                broadcastJsonToRoom("emoji", code, /*status*/res, null, null);
-//            }
-//            return true;
-//        }
-//
-//
-//        return false;
-//    }
-    // ✅ 이모티콘 패킷만 처리
+    // 이모티콘 패킷만 처리
     private boolean handleMediaPacket(String line) {
         // 형식: "@PKG_EMOJI :doing:"
         if (!line.startsWith(Constants.PKG_EMOJI + " ")) {
@@ -225,14 +196,14 @@ public class ClientHandler extends Thread {
                             Constants.PKG_EMOJI + " " + code
             );
             // 선택: JSON 알림 유지하고 싶으면 타입만 맞춰서
-            broadcastJsonToRoom("emoji.secret", code, res, null, null);
+//            broadcastJsonToRoom("emoji.secret", code, res, null, null);
         } else {
             // 일반 방: 클라이언트에서 "nick: @PKG_EMOJI :doing:" 을 보고 이미지 버블로 렌더
             currentRoom.broadcast(
                     nickname + ": " + Constants.PKG_EMOJI + " " + code
             );
             // 필요하면 JSON도 함께 (UI에서 쓰면 되고, 아니라면 제거 가능)
-            broadcastJsonToRoom("emoji", code, res, null, null);
+//            broadcastJsonToRoom("emoji", code, res, null, null);
         }
 
         return true;
@@ -529,42 +500,34 @@ public class ClientHandler extends Thread {
         }
     }
 
-//    private void handleJoinRoom(String roomName) {
-//        // 양끝 따옴표/공백 제거
-//        String rn = roomName.trim().replaceAll("^\"|\"$", "");
-//
-//        if (currentRoom != null) {
-//            handleLeaveRoom(false);
-//        }
-//
-//        Room joinedRoom = roomManager.join(rn, this);
-//        if (joinedRoom != null) {
-//            currentRoom = joinedRoom;
-//
-//            // 1) 방이 들고 있던 최근 메시지 먼저 재생
-//            for (String oldLine : joinedRoom.getHistorySnapshot()) {
-//                sendMessage(oldLine);
-//            }
-//
-//            // 2) (선택) DB 히스토리도 필요하면 그대로 남겨도 됨
-//             ChatMessageRepository.loadRecentMessages(currentRoom.getName(), 50)
-//                     .forEach(this::sendMessage);
-//
-//            // 3) 안내 + 입장 브로드캐스트
-//            sendMessage("[System] '" + rn + "' 방에 입장했습니다.");
-//            currentRoom.broadcast(nickname + "님이 입장했습니다.");
-//            server.broadcastToAllClients(Constants.CMD_ROOMS_LIST);
-//
-//        } else {
-//            sendMessage("[System] 방 입장에 실패했습니다. 정원 초과이거나 방이 존재하지 않습니다.");
-//        }
-//    }
-
     private void handleJoinRoom(String args) {
         // 형식: roomName [password]
-        String[] parts = args.trim().split("\\s+", 2);
-        String roomName = parts[0];
-        String password = parts.length > 1 ? parts[1] : null;
+        args = (args == null) ? "" : args.trim();
+        String roomName;
+        String password = null;
+
+        // 1) 방 이름이 "..." 로 오는 경우 (공백 포함 대비)
+        if (args.startsWith("\"")) {
+            int end = args.indexOf('"', 1);
+            if (end <= 0) {
+                sendMessage("[System] 방 이름 따옴표가 올바르지 않습니다.");
+                return;
+            }
+
+            roomName = args.substring(1, end).trim(); // 따옴표 내부 = 실제 방 이름
+            String rest = args.substring(end + 1).trim(); // 뒤에 비밀번호가 있으면 여기
+
+            if (!rest.isEmpty()) {
+                // rest 전체를 비밀번호로 (공백 허용 필요 없으면 그대로 OK)
+                password = rest;
+            }
+
+        } else {
+            // 2) 기존 포맷: roomName [password]
+            String[] parts = args.split("\\s+", 2);
+            roomName = parts.length > 0 ? parts[0].trim() : "";
+            password = parts.length > 1 ? parts[1].trim() : null;
+        }
 
         if (roomName.isEmpty()) {
             sendMessage("[System] 방 이름을 입력하세요.");
@@ -576,14 +539,14 @@ public class ClientHandler extends Thread {
                 handleLeaveRoom(false);
             }
 
-            // 🔒 비밀방 체크
+            // 비밀방 체크
             Room targetRoom = roomManager.getRoom(roomName);
             if (targetRoom == null) {
                 sendMessage("[System] 존재하지 않는 방입니다.");
                 return;
             }
 
-            // 🔑 비밀번호 검증
+            // 비밀번호 검증
             if (targetRoom.isLocked()) {
                 if (password == null || password.isEmpty()) {
                     sendMessage("[System] 이 방은 비밀번호가 필요합니다.");
@@ -596,7 +559,7 @@ public class ClientHandler extends Thread {
                 }
             }
 
-            // ✅ 입장 처리
+            // 입장 처리
             Room joinedRoom = roomManager.join(roomName, this);
             if (joinedRoom != null) {
                 currentRoom = joinedRoom;

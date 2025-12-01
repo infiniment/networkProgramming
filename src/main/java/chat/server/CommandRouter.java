@@ -121,14 +121,6 @@ public class CommandRouter {
         ctx.currentRoom().broadcast(line);
     }
 
-//    private void who() {
-//        if (ctx.currentRoom() == null) { ctx.sendMessage("[System] 방에 입장 중이 아닙니다."); return; }
-//        // Room 내부에 참가자 PrintWriter만 있어서 닉목록은 ClientHandler 쪽에서 소유/관리하는 게 깔끔하지만
-//        // 간단히 브로드캐스트로 “현재 방 인원 확인해주세요” 대신, 서버가 알 수 있는 최소 정보만 출력.
-//        ctx.sendMessage("[System] 현재 방: " + ctx.currentRoom().getName());
-//        // 필요 시 UserDirectory와 Room의 participants를 매칭해 닉 추출 구조를 확장하세요.
-//    }
-
     private void who() {
         if (ctx.currentRoom() == null) {
             ctx.sendMessage("[System] 방에 입장 중이 아닙니다.");

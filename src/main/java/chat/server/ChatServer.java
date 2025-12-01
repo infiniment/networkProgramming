@@ -11,19 +11,17 @@ public class ChatServer {
     private final ConcurrentHashMap<String, ClientHandler> sessions = new ConcurrentHashMap<>();
     private final RoomManager roomManager;
     private final OmokGameManager gameManager;
-    private final BR31GameManager br31GameManager;  //  추가!
+    private final BR31GameManager br31GameManager;
     private ServerSocket serverSocket;
     private final UserDirectory userDirectory = new UserDirectory();
 
     public ChatServer() {
         this.roomManager = new RoomManager();
         this.gameManager = new OmokGameManager(this);
-        this.br31GameManager = new BR31GameManager(this);  // ✅ 초기화!
+        this.br31GameManager = new BR31GameManager(this);
     }
 
     public UserDirectory getUserDirectory() { return userDirectory; }
-    public OmokGameManager getGameManager() { return gameManager; }
-    public BR31GameManager getBR31GameManager() { return br31GameManager; }  // ✅ 게터 추가!
 
     public void registerSession(String nick, ClientHandler h) { sessions.put(nick, h); }
     public void unregisterSession(String nick) { sessions.remove(nick); }
@@ -39,7 +37,7 @@ public class ChatServer {
                 // 작은 패킷도 즉시 전송
                 socket.setTcpNoDelay(true);
 
-                // ✅ BR31GameManager도 전달!
+                // BR31GameManager도 전달
                 ClientHandler handler = new ClientHandler(socket, this, roomManager, gameManager, br31GameManager);
                 handlers.add(handler);
                 handler.start();

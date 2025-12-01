@@ -50,16 +50,13 @@ public final class EmojiRegistry {
         e.put(":dragon11:", "images/dragon/dragon11.png");
         e.put(":dragon12:", "images/dragon/dragon12.png");
 
-        // TODO: 더 추가 가능
-
         EMOJI = Map.copyOf(e);
 
-        // ➕ 카테고리 구성 (원하는 대로 묶기)
+        // 카테고리 구성 (원하는 대로 묶기)
         Map<String, java.util.List<String>> cats = new LinkedHashMap<>();
         cats.put("쿵야", java.util.List.of(":coong1:", ":coong2:", ":coong3:", ":coong4:", ":coong5:"));
         cats.put("뚱뚱한 곰", java.util.List.of(":bear1:", ":bear2:", ":bear3:", ":bear4:", ":bear5:",":bear6:", ":bear7:", ":bear8:", ":bear9:", ":bear10:"));
         cats.put("귀여운 용", java.util.List.of(":dragon1:", ":dragon2:", ":dragon3:", ":dragon4:", ":dragon5:",":dragon6:", ":dragon7:", ":dragon8:", ":dragon9:", ":dragon10:", ":dragon11:", ":dragon12:"));
-        // TODO: 새 세트들 계속 추가
 
         CATEGORIES = Map.copyOf(cats);
     }
@@ -73,9 +70,6 @@ public final class EmojiRegistry {
         return EMOJI;
     }
 
-    // ➕ 카테고리 API
+    // 카테고리 API
     public static Map<String, java.util.List<String>> categories() { return CATEGORIES; }
-    public static java.util.List<String> listByCategory(String name) {
-        return CATEGORIES.getOrDefault(name, java.util.List.of());
-    }
 }
