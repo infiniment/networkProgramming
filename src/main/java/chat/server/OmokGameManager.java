@@ -62,7 +62,7 @@ public class OmokGameManager {
             if (waitQueue.isEmpty()) {
                 // ========== 호스트 대기 ==========
                 waitQueue.put(playerNickname, playerNickname);
-                System.out.println("[GAME] ✅ " + playerNickname + "님이 호스트로 대기 시작");
+                System.out.println("[GAME] " + playerNickname + "님이 호스트로 대기 시작");
                 return GameJoinResult.WAITING;
             } else {
                 // ========== 게스트 참여 → 게임 시작! ==========
@@ -73,7 +73,7 @@ public class OmokGameManager {
 
                 ClientHandler hostHandler = server.getSession(hostNickname);
                 if (hostHandler == null) {
-                    System.err.println("[GAME] ❌ 호스트 핸들러를 찾을 수 없음");
+                    System.err.println("[GAME] 호스트 핸들러를 찾을 수 없음");
                     return GameJoinResult.HOST_NOT_FOUND;
                 }
 
@@ -87,7 +87,7 @@ public class OmokGameManager {
                 playerToSession.put(hostNickname, session);
                 playerToSession.put(playerNickname, session);
 
-                System.out.println("[GAME] 📊 세션 생성: " + sessionId);
+                System.out.println("[GAME] 세션 생성: " + sessionId);
 
                 // 🔧 즉시 게임 시작 메시지 전송!
                 initiateGameStart(hostNickname, session);
@@ -100,19 +100,19 @@ public class OmokGameManager {
     // ========== 게임 시작 메시지 전송 (핵심!) ==========
     public void initiateGameStart(String hostNickname, OmokGameSession session) {
         synchronized (GLOBAL_LOCK) {
-            System.out.println("[GAME] 📤 게임 시작 프로세스");
+            System.out.println("[GAME] 게임 시작 프로세스");
             System.out.println("[GAME] 호스트: " + session.host + ", 게스트: " + session.opponent);
 
             try {
-                // 1️⃣ 게스트에게: @game:start <호스트 닉네임>
+                // 게스트에게: @game:start <호스트 닉네임>
                 String guestMsg = Constants.RESPONSE_GAME_START + " " + session.host;
-                System.out.println("[GAME] 📤 게스트 ← " + guestMsg);
+                System.out.println("[GAME] 게스트 ← " + guestMsg);
                 session.opponentHandler.sendMessage(guestMsg);
                 session.opponentHandler.outWriter().flush();
 
                 Thread.sleep(50);
 
-                // 2️⃣ 호스트에게: @game:start <게스트 닉네임>
+                // 호스트에게: @game:start <게스트 닉네임>
                 String hostMsg = Constants.RESPONSE_GAME_START + " " + session.opponent;
                 System.out.println("[GAME] 📤 호스트 ← " + hostMsg);
                 session.hostHandler.sendMessage(hostMsg);
@@ -120,25 +120,25 @@ public class OmokGameManager {
 
                 Thread.sleep(50);
 
-                // 3️⃣ 게스트 턴 정보
+                // 게스트 턴 정보
                 session.opponentHandler.sendMessage("@game:turn 2");
                 session.opponentHandler.outWriter().flush();
-                System.out.println("[GAME] 📤 게스트 ← @game:turn 2");
+                System.out.println("[GAME] 게스트 ← @game:turn 2");
 
                 Thread.sleep(50);
 
-                // 4️⃣ 호스트 턴 정보
+                // 호스트 턴 정보
                 session.hostHandler.sendMessage("@game:turn 1");
                 session.hostHandler.outWriter().flush();
-                System.out.println("[GAME] 📤 호스트 ← @game:turn 1");
+                System.out.println("[GAME] 호스트 ← @game:turn 1");
 
                 // 게임 상태 변경
                 session.setState(GameState.PLAYING);
 
-                System.out.println("[GAME] ✅✅ 게임 시작 완료!");
+                System.out.println("[GAME] 게임 시작 완료!");
 
             } catch (InterruptedException e) {
-                System.err.println("[GAME] ❌ 인터럽트: " + e.getMessage());
+                System.err.println("[GAME] 인터럽트: " + e.getMessage());
                 Thread.currentThread().interrupt();
             }
         }
@@ -146,11 +146,11 @@ public class OmokGameManager {
 
     // ========== 게임 이동 기록 ==========
     public synchronized boolean recordMoveWithValidation(String playerNickname, int row, int col) {
-        System.out.println("[GAME] 📍 이동: " + playerNickname + " (" + row + ", " + col + ")");
+        System.out.println("[GAME] 이동: " + playerNickname + " (" + row + ", " + col + ")");
 
         OmokGameSession session = playerToSession.get(playerNickname);
         if (session == null) {
-            System.err.println("[GAME] ❌ 세션 없음");
+            System.err.println("[GAME] 세션 없음");
             return false;
         }
 
@@ -165,13 +165,13 @@ public class OmokGameManager {
             session.hostHandler.sendMessage(endMsg);
             session.opponentHandler.sendMessage(endMsg);
             session.setState(GameState.FINISHED);
-            System.out.println("[GAME] 🏆 게임 종료: " + winnerNickname + "님 승리");
+            System.out.println("[GAME] 게임 종료: " + winnerNickname + "님 승리");
         }
     }
 
     // ========== 플레이어 연결 해제 ==========
     public synchronized void handlePlayerDisconnect(String playerNickname) {
-        System.out.println("[GAME] 🔌 플레이어 연결 해제: " + playerNickname);
+        System.out.println("[GAME] 플레이어 연결 해제: " + playerNickname);
 
         waitQueue.remove(playerNickname);
 
@@ -186,7 +186,7 @@ public class OmokGameManager {
                 session.hostHandler.sendMessage("[System] 상대방이 연결을 종료했습니다.");
             }
 
-            System.out.println("[GAME] 🗑️ 세션 삭제: " + session.getSessionId());
+            System.out.println("[GAME] 세션 삭제: " + session.getSessionId());
         }
     }
 
@@ -204,7 +204,7 @@ public class OmokGameManager {
             for (String key : expiredKeys) {
                 OmokGameSession session = activeSessions.remove(key);
                 if (session != null) {
-                    System.out.println("[GAME] ⏱️ 타임아웃: " + key);
+                    System.out.println("[GAME] 타임아웃: " + key);
                     session.abandonGame();
                 }
             }
@@ -259,23 +259,23 @@ public class OmokGameManager {
 
         public synchronized boolean recordMoveWithValidation(String player, int row, int col) {
             if (state != GameState.PLAYING) {
-                System.err.println("[GAME] ❌ 게임이 진행 중이 아님");
+                System.err.println("[GAME] 게임이 진행 중이 아님");
                 return false;
             }
 
             if (!host.equals(player) && !opponent.equals(player)) {
-                System.err.println("[GAME] ❌ 플레이어 아님");
+                System.err.println("[GAME] 플레이어 아님");
                 return false;
             }
 
             int playerColor = host.equals(player) ? 1 : 2;
             if (playerColor != currentTurn) {
-                System.err.println("[GAME] ❌ 순서 아님: 예상 " + currentTurn + ", 시도 " + playerColor);
+                System.err.println("[GAME] 순서 아님: 예상 " + currentTurn + ", 시도 " + playerColor);
                 return false;
             }
 
             if (row < 0 || row >= 15 || col < 0 || col >= 15) {
-                System.err.println("[GAME] ❌ 범위 오류");
+                System.err.println("[GAME] 범위 오류");
                 return false;
             }
 
@@ -288,20 +288,20 @@ public class OmokGameManager {
                 opponentHandler.sendMessage(moveMessage);
                 opponentHandler.outWriter().flush();
 
-                System.out.println("[GAME] ✅ 이동 전파: " + player);
+                System.out.println("[GAME] 이동 전파: " + player);
 
                 currentTurn = (currentTurn == 1) ? 2 : 1;
                 return true;
 
             } catch (Exception e) {
-                System.err.println("[GAME] ❌ 전송 오류: " + e.getMessage());
+                System.err.println("[GAME] 전송 오류: " + e.getMessage());
                 return false;
             }
         }
 
         public synchronized void abandonGame() {
             state = GameState.ABANDONED;
-            System.out.println("[GAME] 🏁 게임 포기: " + sessionId);
+            System.out.println("[GAME] 게임 포기: " + sessionId);
         }
 
         public boolean isExpired(long timeoutMs) {
@@ -310,12 +310,9 @@ public class OmokGameManager {
 
         public void setState(GameState newState) {
             this.state = newState;
-            System.out.println("[GAME] 🔄 상태 변경: " + state.description);
+            System.out.println("[GAME] 상태 변경: " + state.description);
         }
 
         public String getSessionId() { return sessionId; }
-        public String getHost() { return host; }
-        public String getOpponent() { return opponent; }
-        public GameState getState() { return state; }
     }
 }

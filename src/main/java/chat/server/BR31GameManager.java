@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * BR31GameManager - 베스킨라빈스31 게임 관리
- * 🎲 3-5명 멀티플레이어 게임 지원
+ * 3-5명 멀티플레이어 게임 지원
  *
  * 핵심 흐름:
  * 1. 첫 참여자(호스트) → 인원 설정 대기
@@ -78,7 +78,7 @@ public class BR31GameManager {
                 session = new BR31GameSession(roomId, playerNickname, handler);
                 waitingSessions.put(roomId, session);
 
-                System.out.println("[BR31] ✅ " + playerNickname + "님이 호스트로 대기 시작");
+                System.out.println("[BR31] " + playerNickname + "님이 호스트로 대기 시작");
 
                 // 호스트에게 알림
                 handler.sendMessage(Constants.RESPONSE_GAME_WAITING + " br31 host");
@@ -90,14 +90,14 @@ public class BR31GameManager {
 
                 // 인원이 설정되지 않았으면 대기
                 if (session.getMaxPlayers() == 0) {
-                    System.out.println("[BR31] ⏳ 호스트가 아직 인원을 설정하지 않음");
+                    System.out.println("[BR31] 호스트가 아직 인원을 설정하지 않음");
                     handler.sendMessage("[System] 호스트가 인원을 설정 중입니다...");
                     return JoinResult.HOST_WAITING;
                 }
 
                 // 방이 꽉 찼는지 확인
                 if (session.getPlayerCount() >= session.getMaxPlayers()) {
-                    System.out.println("[BR31] ❌ 방이 꽉 참 (" + session.getMaxPlayers() + "명)");
+                    System.out.println("[BR31] 방이 꽉 참 (" + session.getMaxPlayers() + "명)");
                     return JoinResult.ROOM_FULL;
                 }
 
@@ -107,7 +107,7 @@ public class BR31GameManager {
                 int current = session.getPlayerCount();
                 int max = session.getMaxPlayers();
 
-                System.out.println("[BR31] 👥 게스트 참여: " + playerNickname + " (" + current + "/" + max + ")");
+                System.out.println("[BR31] 게스트 참여: " + playerNickname + " (" + current + "/" + max + ")");
 
                 // 모든 대기자에게 현재 상태 알림
                 String waitMsg = Constants.RESPONSE_GAME_WAITING + " br31 " + current + "/" + max;
@@ -131,23 +131,23 @@ public class BR31GameManager {
             BR31GameSession session = waitingSessions.get(roomId);
 
             if (session == null) {
-                System.err.println("[BR31] ❌ 세션을 찾을 수 없음: " + roomId);
+                System.err.println("[BR31] 세션을 찾을 수 없음: " + roomId);
                 return;
             }
 
             if (!session.isHost(playerNickname)) {
-                System.err.println("[BR31] ❌ 호스트가 아님: " + playerNickname);
+                System.err.println("[BR31] 호스트가 아님: " + playerNickname);
                 return;
             }
 
             if (maxPlayers < 3 || maxPlayers > 5) {
-                System.err.println("[BR31] ❌ 잘못된 인원 수: " + maxPlayers);
+                System.err.println("[BR31] 잘못된 인원 수: " + maxPlayers);
                 return;
             }
 
             session.setMaxPlayers(maxPlayers);
 
-            System.out.println("[BR31] ✅ 호스트 " + playerNickname + "가 최대 인원 " + maxPlayers + "명 설정");
+            System.out.println("[BR31] 호스트 " + playerNickname + "가 최대 인원 " + maxPlayers + "명 설정");
 
             // 호스트에게 대기 상태 알림
             int current = session.getPlayerCount();
@@ -158,7 +158,7 @@ public class BR31GameManager {
 
     // ========== 게임 시작 ==========
     private void startGame(BR31GameSession session) {
-        System.out.println("[BR31] 🎮 게임 시작 준비");
+        System.out.println("[BR31] 게임 시작 준비");
 
         // 대기 큐에서 제거
         waitingSessions.remove(session.getRoomId());
@@ -180,7 +180,7 @@ public class BR31GameManager {
         String startMsg = Constants.RESPONSE_GAME_START + " br31 " + players;
         session.broadcastToAll(startMsg);
 
-        System.out.println("[BR31] ✅ 게임 시작: " + players);
+        System.out.println("[BR31] 게임 시작: " + players);
 
         try {
             Thread.sleep(100);
@@ -192,7 +192,7 @@ public class BR31GameManager {
         String firstPlayer = session.getPlayers().get(0);
         session.broadcastToAll("@game:turn " + firstPlayer);
 
-        System.out.println("[BR31] 🎯 첫 턴: " + firstPlayer);
+        System.out.println("[BR31] 첫 턴: " + firstPlayer);
     }
 
     // ========== 게임 이동 처리 ==========
@@ -201,25 +201,25 @@ public class BR31GameManager {
             BR31GameSession session = playerToSession.get(playerNickname);
 
             if (session == null) {
-                System.err.println("[BR31] ❌ 세션을 찾을 수 없음: " + playerNickname);
+                System.err.println("[BR31] 세션을 찾을 수 없음: " + playerNickname);
                 return false;
             }
 
             if (session.getState() != GameState.PLAYING) {
-                System.err.println("[BR31] ❌ 게임이 진행 중이 아님");
+                System.err.println("[BR31] 게임이 진행 중이 아님");
                 return false;
             }
 
             // 턴 확인
             String currentTurnPlayer = session.getCurrentTurnPlayer();
             if (!currentTurnPlayer.equals(playerNickname)) {
-                System.err.println("[BR31] ❌ 현재 턴이 아님: " + playerNickname);
+                System.err.println("[BR31] 현재 턴이 아님: " + playerNickname);
                 return false;
             }
 
             // 숫자 유효성 검사
             if (numbers.length < 1 || numbers.length > 3) {
-                System.err.println("[BR31] ❌ 잘못된 숫자 개수: " + numbers.length);
+                System.err.println("[BR31] 잘못된 숫자 개수: " + numbers.length);
                 return false;
             }
 
@@ -228,7 +228,7 @@ public class BR31GameManager {
             // 연속된 숫자인지 확인
             for (int i = 0; i < numbers.length; i++) {
                 if (numbers[i] != currentCount + i + 1) {
-                    System.err.println("[BR31] ❌ 연속되지 않은 숫자");
+                    System.err.println("[BR31] 연속되지 않은 숫자");
                     return false;
                 }
             }
@@ -237,7 +237,7 @@ public class BR31GameManager {
             int newCount = numbers[numbers.length - 1];
             session.setCurrentCount(newCount);
 
-            System.out.println("[BR31] ✅ " + playerNickname + " → " + Arrays.toString(numbers) + " (현재: " + newCount + ")");
+            System.out.println("[BR31] " + playerNickname + " → " + Arrays.toString(numbers) + " (현재: " + newCount + ")");
 
             // 모든 플레이어에게 업데이트 전송
             String numbersStr = Arrays.toString(numbers).replaceAll("[\\[\\] ]", "");
@@ -255,7 +255,7 @@ public class BR31GameManager {
             String nextPlayer = session.getCurrentTurnPlayer();
             session.broadcastToAll("@game:turn " + nextPlayer);
 
-            System.out.println("[BR31] 🔄 다음 턴: " + nextPlayer);
+            System.out.println("[BR31] 다음 턴: " + nextPlayer);
 
             return true;
         }
@@ -282,13 +282,13 @@ public class BR31GameManager {
             playerToSession.remove(player);
         }
 
-        System.out.println("[BR31] 🗑️ 세션 정리 완료: " + session.getSessionId());
+        System.out.println("[BR31] 세션 정리 완료: " + session.getSessionId());
     }
 
     // ========== 플레이어 연결 해제 ==========
     public void handlePlayerDisconnect(String playerNickname) {
         synchronized (GLOBAL_LOCK) {
-            System.out.println("[BR31] 🔌 플레이어 연결 해제: " + playerNickname);
+            System.out.println("[BR31] 플레이어 연결 해제: " + playerNickname);
 
             // 대기 세션에서 제거
             for (BR31GameSession session : waitingSessions.values()) {
@@ -296,7 +296,7 @@ public class BR31GameManager {
                     if (session.isHost(playerNickname)) {
                         // 호스트가 나가면 세션 삭제
                         waitingSessions.remove(session.getRoomId());
-                        System.out.println("[BR31] 🗑️ 호스트 이탈 - 세션 삭제");
+                        System.out.println("[BR31] 호스트 이탈 - 세션 삭제");
                     } else {
                         // 게스트가 나가면 플레이어만 제거
                         session.removePlayer(playerNickname);
@@ -338,7 +338,7 @@ public class BR31GameManager {
             for (String key : expiredKeys) {
                 BR31GameSession session = waitingSessions.remove(key);
                 if (session != null) {
-                    System.out.println("[BR31] ⏱️ 대기 세션 타임아웃: " + key);
+                    System.out.println("[BR31]]️ 대기 세션 타임아웃: " + key);
                     session.broadcastToAll("[System] 대기 시간 초과로 게임이 취소되었습니다.");
                 }
             }

@@ -52,7 +52,7 @@ public final class EmojiRegistry {
 
         EMOJI = Map.copyOf(e);
 
-        // 카테고리 구성 (원하는 대로 묶기)
+        // 카테고리 구성
         Map<String, java.util.List<String>> cats = new LinkedHashMap<>();
         cats.put("쿵야", java.util.List.of(":coong1:", ":coong2:", ":coong3:", ":coong4:", ":coong5:"));
         cats.put("뚱뚱한 곰", java.util.List.of(":bear1:", ":bear2:", ":bear3:", ":bear4:", ":bear5:",":bear6:", ":bear7:", ":bear8:", ":bear9:", ":bear10:"));

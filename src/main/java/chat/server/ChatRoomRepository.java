@@ -6,11 +6,13 @@ import java.util.List;
 
 public class ChatRoomRepository {
 
+    // DB 접속 정보(환경에 맞게 수정)
     private static final String URL =
             "jdbc:mysql://localhost:3306/chatdb?serverTimezone=UTC&characterEncoding=UTF-8";
     private static final String USER = "root";
     private static final String PASSWORD = "1234";
 
+    // 클래스 로딩 시 MySQL JDBC 드라이버 로드
     static {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -19,7 +21,7 @@ public class ChatRoomRepository {
         }
     }
 
-    // 1) 서버 시작 시 전체 방 목록 불러오기
+    // 서버 시작 시 DB에 저장된 모든 채팅방 정보를 읽어 Room 리스트로 반환
     public static List<Room> loadAllRooms() {
         String sql = "SELECT name, capacity, locked, password, owner_name FROM chat_room";
         List<Room> result = new ArrayList<>();
@@ -32,7 +34,7 @@ public class ChatRoomRepository {
                 String name = rs.getString("name");
                 int capacity = rs.getInt("capacity");
                 boolean locked = rs.getBoolean("locked");
-                String password = rs.getString("password"); // null 가능
+                String password = rs.getString("password"); // 잠금방이 아니면 null일 수 있음
                 String ownerName = rs.getString("owner_name");
 
                 Room room = new Room(name, capacity, locked, password, ownerName);
@@ -46,7 +48,7 @@ public class ChatRoomRepository {
         return result;
     }
 
-    // 2) 방을 insert 또는 update (ON DUPLICATE KEY 사용)
+    // 방 정보를 DB에 저장하되, 같은 name이 있으면 INSERT 대신 UPDATE로 갱신
     public static void upsertRoom(Room room) {
         String sql =
                 "INSERT INTO chat_room (name, capacity, locked, password, owner_name) " +
@@ -64,8 +66,7 @@ public class ChatRoomRepository {
             ps.setInt(2, room.getCapacity());
             ps.setBoolean(3, room.isLocked());
 
-
-            // 잠금 방이면 비밀번호, 아니면 null
+            // 잠금방이면 비밀번호를 저장하고, 아니면 null로 저장
             String pwd = room.isLocked() ? room.getPassword() : null;
             ps.setString(4, pwd);
 
@@ -78,7 +79,7 @@ public class ChatRoomRepository {
         }
     }
 
-    // 3) 방 삭제시 DB에서도 삭제 (옵션)
+    // 방 삭제 시 DB에서도 해당 방 레코드를 삭제
     public static void deleteRoom(String roomName) {
         String sql = "DELETE FROM chat_room WHERE name = ?";
 

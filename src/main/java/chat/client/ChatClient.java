@@ -100,10 +100,6 @@ public class ChatClient {
                     final String msg = line;
                     SwingUtilities.invokeLater(() -> listener.onMessageReceived(msg));
                 }
-//                while (running && (line = in.readLine()) != null) {
-//                    // 리스너를 통해 수신한 메시지 전달
-//                    listener.onMessageReceived(line);
-//                }
             } catch (IOException e) {
                 if (running) {
                     System.err.println("[CLIENT] 수신 중 오류: " + e.getMessage());
@@ -111,11 +107,10 @@ public class ChatClient {
             } finally {
                 // EDT에서 종료 콜백
                 SwingUtilities.invokeLater(listener::onDisconnected);
-//                listener.onDisconnected();
             }
         }, "client-inbound");
 
-        // 데몬 스레드로 설정 → 메인 스레드 종료 시 자동으로 종료
+        // 데몬 스레드로 설정 -> 메인 스레드 종료 시 자동으로 종료
         receiveThread.setDaemon(true);
         receiveThread.start();
     }
@@ -138,21 +133,6 @@ public class ChatClient {
         }
         System.out.println("[CLIENT] 연결이 종료되었습니다.");
     }
-//    public void disconnect() {
-//        // 실행 상태 플래그 false → 수신 루프 종료 트리거
-//        running = false;
-//
-//        try {
-//            // 입출력 스트림 및 소켓 순차적으로 정리
-//            if (in != null) in.close();
-//            if (out != null) out.close();
-//            if (socket != null && !socket.isClosed()) socket.close();
-//        } catch (IOException e) {
-//            System.err.println("[CLIENT] 종료 중 오류: " + e.getMessage());
-//        }
-//
-//        System.out.println("[CLIENT] 연결이 종료되었습니다.");
-//    }
 
     // 메시지 수신 리스너 인터페이스
     // GUI나 콘솔이 이 인터페이스를 구현하여 메시지 처리
