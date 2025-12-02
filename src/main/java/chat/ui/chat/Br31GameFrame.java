@@ -1,7 +1,6 @@
 package chat.ui.chat;
 
 import chat.client.ChatClient;
-import chat.ui.common.Colors;
 import chat.ui.fonts.FontManager;
 import chat.util.Constants;
 
@@ -12,10 +11,6 @@ import java.awt.event.*;
 import java.util.*;
 import java.util.List;
 
-/**
- * Br31GameFrame - 베스킨라빈스31 게임 화면 (개선 버전)
- * 🎲 3-5명 멀티플레이어 게임
- */
 public class Br31GameFrame extends JFrame implements ChatClient.MessageListener {
 
     private static final Color BG_COLOR = new Color(240, 242, 245);
@@ -97,7 +92,7 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         });
     }
 
-    // ========== 1. 셋업 화면 ==========
+    // 셋업 화면
     private void buildSetupPanel() {
         setupPanel = new JPanel(new BorderLayout(20, 20));
         setupPanel.setBackground(BG_COLOR);
@@ -136,7 +131,7 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         setupPanel.add(buttonPanel, BorderLayout.CENTER);
     }
 
-    // ========== 2. 대기 화면 ==========
+    // 대기 화면
     private void buildWaitingPanel() {
         waitingPanel = new JPanel(new BorderLayout(20, 20));
         waitingPanel.setBackground(BG_COLOR);
@@ -171,29 +166,26 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         waitingPanel.add(btnCancel, BorderLayout.SOUTH);
     }
 
-    // ========== 3. 게임 화면 (개선 버전) ==========
+    // 게임 화면
     private void buildGamePanel() {
         gamePanel = new JPanel(new BorderLayout(15, 15));
         gamePanel.setBackground(BG_COLOR);
         gamePanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // ========== 왼쪽: 숫자판 + 현재 턴 ==========
         JPanel leftPanel = new JPanel(new BorderLayout(10, 10));
         leftPanel.setOpaque(false);
 
-        // 현재 턴 표시
         lblCurrentTurn = new JLabel("게임 시작!", SwingConstants.CENTER);
         lblCurrentTurn.setFont(FontManager.get("BMDOHYEON_ttf.ttf", Font.BOLD, 18));
         lblCurrentTurn.setForeground(TEXT_PRIMARY);
         lblCurrentTurn.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // 숫자판 (1~31)
         JPanel numberGridContainer = new RoundedPanel(15);
         numberGridContainer.setBackground(CARD_BG);
         numberGridContainer.setBorder(new EmptyBorder(20, 20, 20, 20));
         numberGridContainer.setLayout(new BorderLayout());
 
-        JLabel gridTitle = new JLabel("🔢 숫자판", SwingConstants.CENTER);
+        JLabel gridTitle = new JLabel("숫자판", SwingConstants.CENTER);
         gridTitle.setFont(FontManager.get("BMDOHYEON_ttf.ttf", Font.BOLD, 16));
         gridTitle.setForeground(TEXT_PRIMARY);
         gridTitle.setBorder(new EmptyBorder(0, 0, 15, 0));
@@ -208,18 +200,16 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         leftPanel.add(lblCurrentTurn, BorderLayout.NORTH);
         leftPanel.add(numberGridContainer, BorderLayout.CENTER);
 
-        // ========== 오른쪽: 플레이어 목록 + 게임 규칙 ==========
         JPanel rightPanel = new JPanel(new BorderLayout(10, 10));
         rightPanel.setOpaque(false);
         rightPanel.setPreferredSize(new Dimension(280, 0));
 
-        // 플레이어 목록
         JPanel playerSection = new RoundedPanel(15);
         playerSection.setBackground(CARD_BG);
         playerSection.setBorder(new EmptyBorder(20, 20, 20, 20));
         playerSection.setLayout(new BorderLayout(10, 10));
 
-        JLabel playerTitle = new JLabel("👥 플레이어");
+        JLabel playerTitle = new JLabel("플레이어");
         playerTitle.setFont(FontManager.get("BMDOHYEON_ttf.ttf", Font.BOLD, 16));
         playerTitle.setForeground(TEXT_PRIMARY);
 
@@ -271,7 +261,7 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         bottomPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         bottomPanel.setLayout(new BorderLayout(10, 10));
 
-        JLabel btnTitle = new JLabel("🎯 선택하기", SwingConstants.CENTER);
+        JLabel btnTitle = new JLabel("선택하기", SwingConstants.CENTER);
         btnTitle.setFont(FontManager.get("BMDOHYEON_ttf.ttf", Font.BOLD, 14));
         btnTitle.setForeground(TEXT_PRIMARY);
 
@@ -293,14 +283,12 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         gamePanel.add(bottomPanel, BorderLayout.SOUTH);
     }
 
-    // ========== 숫자판 초기화 ==========
     private void initializeNumberGrid() {
         numberGridPanel.removeAll();
         for (int i = 1; i <= 31; i++) {
             JLabel numLabel = createNumberLabel(i);
             numberGridPanel.add(numLabel);
         }
-        // 빈 칸 채우기 (4x8 = 32칸, 31개 숫자)
         numberGridPanel.add(new JLabel());
     }
 
@@ -324,7 +312,6 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         return label;
     }
 
-    // ========== 숫자판 업데이트 ==========
     private void updateNumberGrid(int count) {
         SwingUtilities.invokeLater(() -> {
             Component[] components = numberGridPanel.getComponents();
@@ -481,7 +468,6 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         return btn;
     }
 
-    // ========== 게임 로직 메서드들 (기존 유지) ==========
     private void selectPlayerCount(int count) {
         isHost = true;
         maxPlayers = count;
@@ -528,13 +514,11 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         return currentTurnPlayer.equals(myNickname);
     }
 
-    // ========== 4. 결과 화면 (개선 버전) ==========
     private void buildResultPanel() {
         resultPanel = new JPanel(new BorderLayout(20, 20));
         resultPanel.setBackground(BG_COLOR);
         resultPanel.setBorder(new EmptyBorder(60, 60, 60, 60));
 
-        // ========== 중앙: 결과 텍스트 ==========
         JPanel centerPanel = new JPanel(new GridBagLayout());
         centerPanel.setOpaque(false);
 
@@ -556,7 +540,6 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         gbc.insets = new Insets(20, 0, 0, 0);
         centerPanel.add(lblSubtext, gbc);
 
-        // ========== 하단: 버튼들 ==========
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         bottomPanel.setOpaque(false);
         bottomPanel.setPreferredSize(new Dimension(0, 60));
@@ -572,14 +555,12 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         resultPanel.add(centerPanel, BorderLayout.CENTER);
         resultPanel.add(bottomPanel, BorderLayout.SOUTH);
 
-        // ✅ 라벨들을 저장해서 나중에 접근
         resultPanel.putClientProperty("lblTitle", lblTitle);
         resultPanel.putClientProperty("lblSubtext", lblSubtext);
     }
 
     private void showResult(String loser) {
         SwingUtilities.invokeLater(() -> {
-            // resultPanel에 저장된 라벨들 가져오기
             JLabel lblTitle = (JLabel) resultPanel.getClientProperty("lblTitle");
             JLabel lblSubtext = (JLabel) resultPanel.getClientProperty("lblSubtext");
 
@@ -602,7 +583,6 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         });
     }
 
-    // ========== 메시지 수신 처리 (기존 로직 유지 + 업데이트 추가) ==========
     @Override
     public void onMessageReceived(String line) {
         System.out.println("[BR31-FRAME] 수신: " + line);
@@ -612,13 +592,13 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
 
             SwingUtilities.invokeLater(() -> {
                 if (parts.length > 2 && parts[2].equals("host")) {
-                    // 호스트만 SETUP 화면
+
                     isHost = true;
                     gameState = GameState.SETUP;
                     CardLayout cl = (CardLayout) mainPanel.getLayout();
                     cl.show(mainPanel, "SETUP");
                 } else {
-                    // 게스트는 WAITING 화면
+
                     gameState = GameState.WAITING;
                     CardLayout cl = (CardLayout) mainPanel.getLayout();
                     cl.show(mainPanel, "WAITING");
@@ -689,7 +669,6 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
         });
     }
 
-    // ========== RoundedPanel 내부 클래스 ==========
     static class RoundedPanel extends JPanel {
         private final int radius;
         RoundedPanel(int radius) {

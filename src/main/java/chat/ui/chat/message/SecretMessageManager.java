@@ -36,7 +36,7 @@ public class SecretMessageManager {
 
 
     private boolean secretOn = false;
-    private String currentSid = null; // 서버가 브로드캐스트한 sid
+    private String currentSid = null;
     private final Map<String, List<JComponent>> buckets = new HashMap<>();
 
     public SecretMessageManager(JPanel chatContainer, JScrollPane chatScroll,
@@ -48,9 +48,6 @@ public class SecretMessageManager {
         this.uiDelegate = uiDelegate;
         this.emojiSize = emojiSize;
     }
-
-
-
     /* ===== 서버 이벤트 핸들러 ===== */
 
     // @secret:on {sid} {hostNick}
@@ -78,27 +75,11 @@ public class SecretMessageManager {
         final String sidToClear = currentSid;
         currentSid = null;
 
-//        new Thread(() -> {  // 🧵 별도 스레드로 clear 실행
-//            SwingUtilities.invokeLater(() -> {
-//                btnSecret.setEnabled(false);
-//                UiUtils.commitChatUpdate(chatContainer, chatScroll, () -> {
-//                    for (List<JComponent> list : buckets.values())
-//                        for (JComponent c : list)
-//                            chatContainer.remove(c);
-//                    buckets.clear();
-//                });
-//                btnSecret.setSelected(false);
-//                if (uiDelegate != null) uiDelegate.onSecretTheme(false);
-//                btnSecret.setEnabled(true);
-//            });
-//        }).start();
         // UI 작업은 EDT에서
         SwingUtilities.invokeLater(() -> {
             btnSecret.setEnabled(false);
 
             UiUtils.commitChatUpdate(chatContainer, chatScroll, () -> {
-                // 현재 구현: 시크릿 끌 때 해당 sid 관계없이 모든 시크릿 버킷 제거
-                // (방 단위 시크릿이라 sid가 1개씩이므로 이게 더 안전)
                 for (List<JComponent> list : buckets.values()) {
                     for (JComponent c : list) chatContainer.remove(c);
                 }
@@ -110,66 +91,18 @@ public class SecretMessageManager {
             btnSecret.setEnabled(true);
         });
     }
-
-//    public void onSecretOff() {
-//        if (!secretOn) return; // 이미 꺼져있으면 무시
-//        final String sidToClear = currentSid;
-//
-//        secretOn = false;
-//        currentSid = null;
-//
-//        SwingUtilities.invokeLater(() -> {
-//            btnSecret.setSelected(false);
-//            if (uiDelegate != null) uiDelegate.onSecretTheme(false);
-//
-//            // 이 타이밍에 clear 실행
-//            if (sidToClear != null) {
-//                UiUtils.commitChatUpdate(chatContainer, chatScroll, () -> {
-//                    List<JComponent> list = buckets.remove(sidToClear);
-//                    if (list != null) for (JComponent c : list) chatContainer.remove(c);
-//                });
-//            }
-//        });
-//    }
-
-    // @secret:msg {sid} {nick}: {msg}
-//    public void onSecretMsg(String sid, String user, String msg) {
-//        SwingUtilities.invokeLater(() -> {
-//            UiUtils.commitChatUpdate(chatContainer, chatScroll, () -> {
-//                boolean isMyMessage = user.equals(myNick);
-//
-//                // 왼쪽 버블 + 비밀 모드 표시 (점선)
-//                JPanel panel = buildLeftBubble(
-//                        isMyMessage ? user + " (나)" : user,
-//                        msg,
-//                        /*secret*/ true
-//                );
-//
-//                chatContainer.add(panel);
-//                chatContainer.add(Box.createVerticalStrut(8));
-//                buckets.computeIfAbsent(sid, k -> new ArrayList<>()).add(panel);
-//            });
-//        });
-//    }
-
     public void onSecretMsg(String sid, String user, String msg) {
         SwingUtilities.invokeLater(() -> {
             UiUtils.commitChatUpdate(chatContainer, chatScroll, () -> {
 
-                // 내 메시지는 ChatFrame에서 이미 로컬 렌더했으니 보통은 넘어오지 않지만,
-                // 혹시라도 오면 중복 방지
                 if (user.equals(myNick)) {
                     return;
                 }
-
-                // ---- 이모티콘인지 판별 ----
                 String code = null;
 
-                // 형식 1) "@PKG_EMOJI :code:"
                 if (msg.startsWith(Constants.PKG_EMOJI)) {
                     code = msg.substring(Constants.PKG_EMOJI.length()).trim();
                 }
-                // 형식 2) ":code:"만 온 경우(호환)
                 else if (msg.matches("^:[a-z_]+:$")) {
                     code = msg;
                 }
@@ -180,7 +113,7 @@ public class SecretMessageManager {
                     String path = EmojiRegistry.findEmoji(code);
                     ImageIcon icon = loadEmojiIcon(path);
                     if (icon != null) {
-                        // 시크릿 이모티콘 말풍선 (점선)
+                        // 시크릿 이모티콘 말풍선
                         panel = buildLeftEmojiBubble(user, icon, true);
                     } else {
                         // 아이콘 실패 시 텍스트로라도 표시
@@ -216,7 +149,6 @@ public class SecretMessageManager {
     public boolean isSecretOn() { return secretOn; }
     public String currentSid()  { return currentSid; }
 
-    /** 내가 보낸 시크릿 메시지는 로컬에서 말풍선을 만들지 않는다(서버 에코만 렌더). */
     public void addMySecretEcho(String msg) {
         SwingUtilities.invokeLater(() -> {
             UiUtils.commitChatUpdate(chatContainer, chatScroll, () -> {
@@ -231,7 +163,7 @@ public class SecretMessageManager {
                 // 시크릿: 점선 버블
                 JPanel bubble = createBubble(
                         msg,
-                        Colors.SECRET_ACCENT,           // 점선 색
+                        Colors.SECRET_ACCENT,
                         Colors.TEXT_PRIMARY,
                         /*dashed*/ true
                 );
@@ -242,33 +174,12 @@ public class SecretMessageManager {
                 chatContainer.add(messagePanel);
                 chatContainer.add(Box.createVerticalStrut(8));
 
-                // 버킷에 등록 (내 메시지도 clear 대상)
                 if (currentSid != null) {
                     buckets.computeIfAbsent(currentSid, k -> new ArrayList<>()).add(messagePanel);
                 }
             });
         });
     }
-
-    /* ===== 내부 UI 유틸 ===== */
-
-//    private void addBanner() {
-//        UiUtils.commitChatUpdate(chatContainer, chatScroll, () -> {
-//            JPanel notice = new JPanel(new FlowLayout(FlowLayout.CENTER));
-//            notice.setOpaque(false);
-//            notice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-//
-//            JLabel label = new JLabel("[!] 시크릿 모드 활성화 - 메시지가 저장되지 않습니다");
-//            label.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.BOLD, 12));
-//            label.setForeground(Colors.SECRET_ACCENT);
-//
-//            notice.add(label);
-//            chatContainer.add(notice);
-//            chatContainer.add(Box.createVerticalStrut(8));
-//        });
-//    }
-
-
     private JPanel buildLeftBubble(String user, String text, boolean secret) {
         JPanel messagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         messagePanel.setOpaque(false);
@@ -291,8 +202,8 @@ public class SecretMessageManager {
 
         boolean dashed = secret;
         Color bubbleColor = secret
-                ? Colors.SECRET_ACCENT        // 점선 색
-                : Colors.OTHER_BUBBLE;        // 일반 버블 배경
+                ? Colors.SECRET_ACCENT
+                : Colors.OTHER_BUBBLE;
         Color textColor = Colors.TEXT_PRIMARY;
 
         JPanel bubble = createBubble(text, bubbleColor, textColor, dashed);
@@ -313,10 +224,6 @@ public class SecretMessageManager {
         return messagePanel;
     }
 
-    /**
-     * dashed == false : 채워진 일반 말풍선
-     * dashed == true  : 투명 배경 + 점선 테두리
-     */
     private JPanel createBubble(String text, Color baseColor, Color textColor, boolean dashed) {
         JPanel bubble = new JPanel() {
             @Override
@@ -384,17 +291,6 @@ public class SecretMessageManager {
         this.secretOn = true;
         if (uiDelegate != null) uiDelegate.onSecretTheme(true);
     }
-
-//    public void optimisticOff() {
-//        this.secretOn = false;
-//        if (uiDelegate != null) uiDelegate.onSecretTheme(false);
-//
-//        // 내 화면에서도 시크릿 끄면 즉시 메시지 제거
-//        if (currentSid != null) {
-//            onSecretClear(currentSid);
-//            currentSid = null;
-//        }
-//    }
 
     public void optimisticOff() {
         if (!secretOn) return;
@@ -522,9 +418,6 @@ public class SecretMessageManager {
             });
         });
     }
-
-
-
     public String getCurrentSid() {
         return currentSid;
     }

@@ -2,11 +2,7 @@ package chat.ui.common;
 
 import java.awt.Color;
 
-/**
- * Colors
- * - UI 전역에서 쓰는 색상 토큰 모음
- * - 팔레트를 한 곳에서 관리하면 테마 변경/일관성이 쉬움
- */
+// Colors : ui 전역에서 쓰는 토큰 모음
 public final class Colors {
     private Colors(){}
 

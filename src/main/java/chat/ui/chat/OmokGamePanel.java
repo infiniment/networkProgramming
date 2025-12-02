@@ -17,12 +17,9 @@ public class OmokGamePanel extends JPanel {
     private OmokGameFrame gameFrame;
     private boolean gameOver = false;
     private int winnerColor = 0;
-
     private String opponentNickname = "";
     private boolean gameEnabled = false;
     private boolean myTurn = false;
-
-    // ✅ 마우스 위치 추적용 변수
     private int hoverRow = -1;
     private int hoverCol = -1;
 
@@ -42,7 +39,6 @@ public class OmokGamePanel extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 if (!gameEnabled || !myTurn) {
 
-                    // ✅ 아직 한 수도 안 둔 상태에서 내가 백돌이면 안내 메시지
                     if (!gameOver && isBoardEmpty()) {
                         int myColor = gameFrame.getMyColor();
                         if (myColor == 2) { // 백돌
@@ -54,7 +50,6 @@ public class OmokGamePanel extends JPanel {
                             );
                         }
                     }
-
                     System.out.println("[OMOK-PANEL] 클릭 무시: gameEnabled=" + gameEnabled +
                             ", myTurn=" + myTurn);
                     return;
@@ -70,7 +65,6 @@ public class OmokGamePanel extends JPanel {
             }
         });
 
-        // ✅ 마우스 움직임 추적 추가
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
@@ -92,7 +86,6 @@ public class OmokGamePanel extends JPanel {
                 int col = Math.round((e.getX() - boardX - CELL_SIZE / 2f) / CELL_SIZE);
                 int row = Math.round((e.getY() - boardY - CELL_SIZE / 2f) / CELL_SIZE);
 
-                // 범위 체크 및 빈 칸 체크
                 if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE && board[row][col] == 0) {
                     if (hoverRow != row || hoverCol != col) {
                         hoverRow = row;
@@ -112,8 +105,6 @@ public class OmokGamePanel extends JPanel {
         setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
         initBoard();
     }
-
-    // 보드에 아직 아무 돌도 없는지 체크
     private boolean isBoardEmpty() {
         for (int r = 0; r < BOARD_SIZE; r++) {
             for (int c = 0; c < BOARD_SIZE; c++) {
@@ -138,28 +129,23 @@ public class OmokGamePanel extends JPanel {
 
     public void setGameEnabled(boolean enabled) {
         this.gameEnabled = enabled;
-        System.out.println("[OMOK-PANEL] setGameEnabled(" + enabled + ")");
         updateCursor();
         repaint();
     }
 
     public void setOpponentNickname(String opponentNickname) {
         this.opponentNickname = opponentNickname;
-        System.out.println("[OMOK-PANEL] opponentNickname 설정: " + opponentNickname);
         repaint();
     }
 
     public void setMyTurn(boolean myTurn) {
         this.myTurn = myTurn;
-        System.out.println("[OMOK-PANEL] setMyTurn(" + myTurn + ")");
         updateCursor();
     }
 
     public boolean isMyTurn() {
         return myTurn;
     }
-
-    // ✅ 커서 업데이트 메서드
     private void updateCursor() {
         if (gameEnabled && myTurn && !gameOver) {
             setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -168,7 +154,6 @@ public class OmokGamePanel extends JPanel {
         }
     }
 
-    // ========== 렌더링 ==========
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -179,7 +164,6 @@ public class OmokGamePanel extends JPanel {
         drawBoard(g2);
         drawStones(g2);
 
-        // ✅ 미리보기 그리기 (돌보다 나중에 그려야 위에 표시됨)
         if (hoverRow >= 0 && hoverCol >= 0 && gameEnabled && myTurn && !gameOver) {
             drawPreview(g2);
         }
@@ -195,7 +179,6 @@ public class OmokGamePanel extends JPanel {
         g2.dispose();
     }
 
-    // ✅ 미리보기 그리기 메서드 (격자선 하이라이트 + 반투명 돌)
     private void drawPreview(Graphics2D g2) {
         int panelWidth = getWidth();
         int panelHeight = getHeight();
@@ -207,7 +190,6 @@ public class OmokGamePanel extends JPanel {
         int cellY = y + hoverRow * CELL_SIZE;
         int stoneRadius = (int)(CELL_SIZE * 0.4);
 
-        // 1️⃣ 격자선 하이라이트 (밝은 주황색)
         g2.setColor(new Color(255, 200, 100, 80));
         g2.setStroke(new BasicStroke(3));
 
@@ -216,11 +198,9 @@ public class OmokGamePanel extends JPanel {
         // 세로선 하이라이트
         g2.drawLine(cellX, y, cellX, y + boardPixelSize);
 
-        // 2️⃣ 교차점 원 (작은 원)
         g2.setColor(new Color(255, 159, 64, 120));
         g2.fillOval(cellX - 6, cellY - 6, 12, 12);
 
-        // 3️⃣ 돌 미리보기 (반투명)
         int myColor = gameFrame.getMyColor();
 
         if (myColor == 1) {
@@ -277,7 +257,6 @@ public class OmokGamePanel extends JPanel {
         return ".".repeat(dotCount);
     }
 
-    // ========== 보드 그리기 ==========
     private void drawBoard(Graphics2D g2) {
         int panelWidth = getWidth();
         int panelHeight = getHeight();
@@ -297,7 +276,6 @@ public class OmokGamePanel extends JPanel {
             g2.drawLine(x + i * CELL_SIZE, y, x + i * CELL_SIZE, y + boardPixelSize);
         }
 
-        // 화점
         int[] dots = {3, 7, 11};
         for (int row : dots) {
             for (int col : dots) {
@@ -308,7 +286,6 @@ public class OmokGamePanel extends JPanel {
         }
     }
 
-    // ========== 돌 그리기 ==========
     private void drawStones(Graphics2D g2) {
         int panelWidth = getWidth();
         int panelHeight = getHeight();
@@ -345,7 +322,6 @@ public class OmokGamePanel extends JPanel {
         }
     }
 
-    // ========== 마우스 클릭 처리 ==========
     private void handleClick(int mouseX, int mouseY) {
         if (gameOver || !gameEnabled || !myTurn) {
             System.out.println("[OMOK-PANEL] 클릭 무시");
@@ -371,38 +347,29 @@ public class OmokGamePanel extends JPanel {
             return;
         }
 
-        // 서버에만 전송
         sendMoveToServer(row, col);
-
-        // 내 턴 비활성화 (서버 응답 대기)
         setMyTurn(false);
         setGameEnabled(false);
 
-        // ✅ 미리보기 제거
         hoverRow = -1;
         hoverCol = -1;
 
-        // 화면 갱신
         repaint();
     }
 
-    // ========== 돌 놓기 ==========
     public void placeStone(int row, int col, int player) {
         board[row][col] = player;
         repaint();
     }
 
-    // ========== 턴 변경 ==========
     public void changeTurn() {
         currentPlayer = (currentPlayer == 1) ? 2 : 1;
         System.out.println("[OMOK-PANEL] 턴 변경 → currentPlayer=" + currentPlayer);
     }
 
-    // ========== 서버에 이동 전송 ==========
     private void sendMoveToServer(int row, int col) {
         if (gameFrame.getClient() != null) {
             String msg = Constants.CMD_GAME_MOVE + " " + row + " " + col;
-            System.out.println("[OMOK-PANEL] 📤 서버에 이동 전송: " + msg);
             gameFrame.getClient().sendMessage(msg);
         }
     }
@@ -417,7 +384,6 @@ public class OmokGamePanel extends JPanel {
 
     public void setGameOver(boolean gameOver) {
         this.gameOver = gameOver;
-        // ✅ 게임 종료 시 미리보기 제거
         hoverRow = -1;
         hoverCol = -1;
         updateCursor();
@@ -453,7 +419,6 @@ public class OmokGamePanel extends JPanel {
         return count >= 5;
     }
 
-    // ========== 게임 오버 메시지 ==========
     private void drawGameOverMessage(Graphics2D g2) {
         String winnerName = (winnerColor == gameFrame.getMyColor())
                 ? gameFrame.getMyNickname()
@@ -480,11 +445,10 @@ public class OmokGamePanel extends JPanel {
         g2.drawString(message, x, y + 10);
     }
 
-    // ========== Public 메서드 ==========
     public void restart() {
         initBoard();
         myTurn = false;
-        hoverRow = -1;  // ✅ 미리보기 초기화
+        hoverRow = -1;
         hoverCol = -1;
         repaint();
     }
@@ -493,7 +457,6 @@ public class OmokGamePanel extends JPanel {
 
     public boolean checkWin() { return gameOver; }
 
-    // ========== 폰트 로드 ==========
     private Font loadCustomFont(String fontFileName, int style, int size) {
         try {
             String path = "fonts/ttf/" + fontFileName;

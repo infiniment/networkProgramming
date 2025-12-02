@@ -17,29 +17,23 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * RoomListFrame - 채팅방 목록 화면
- */
+//RoomListFrame - 채팅방 목록 화면
+
 public class RoomListFrame extends JFrame implements ChatClient.MessageListener {
-
-    // HashMap은 수신스레드/EDT 동시 접근 위험 -> ConcurrentHashMap 추천
     private final Map<String, ChatFrame> openChatFrames = new ConcurrentHashMap<>();
-
-    // 현재 포커스/활성 채팅창 추적
     private volatile ChatFrame activeChatFrame = null;
 
     private Component getPopupParent() {
         ChatFrame a = activeChatFrame;
         if (a != null && a.isShowing()) return a;
 
-        // 활성창이 없으면 아무 채팅창이라도 하나
         for (ChatFrame f : openChatFrames.values()) {
             if (f != null && f.isShowing()) return f;
         }
-        return this; // 채팅창이 없으면 목록이 부모
+        return this;
     }
 
-    // ========== 색상 팔레트 ==========
+    // 색상 팔레트
     private static final Color PRIMARY = new Color(255, 159, 64);
     private static final Color PRIMARY_HOVER = new Color(255, 140, 40);
     private static final Color BG_COLOR = new Color(255, 247, 237);
@@ -66,10 +60,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
 
     private final List<String> passthroughLog = new CopyOnWriteArrayList<>();
 
-    // 🔧 게임 메시지 버퍼
     private final List<String> gameMessageBuffer = new CopyOnWriteArrayList<>();
-
-    // 🔑 비밀방 입장 대기 상태
     private String pendingRoomJoin = null;
     private String pendingRoomPassword = null;
 
@@ -92,7 +83,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         setContentPane(mainPanel);
     }
 
-    // ========== 헤더 영역 ==========
+    // 헤더 영역
     private JComponent buildHeader() {
         JPanel header = new RoundedPanel(18);
         header.setBackground(CARD_BG);
@@ -100,7 +91,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         header.setLayout(new BorderLayout(20, 0));
         header.setPreferredSize(new Dimension(0, 80));
 
-        // -------- 왼쪽: 타이틀 + 서브타이틀 --------
         JPanel leftPanel = new JPanel();
         leftPanel.setOpaque(false);
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
@@ -117,7 +107,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         leftPanel.add(Box.createVerticalStrut(4));
         leftPanel.add(subtitle);
 
-        // -------- 오른쪽: 상태 + 유저 정보 --------
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setOpaque(false);
 
@@ -155,7 +144,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return wrapper;
     }
 
-    // ========== 메인 컨텐츠 ==========
+    // 메인 컨텐츠
     private JComponent buildContent() {
         JPanel content = new JPanel(new BorderLayout(0, 16));
         content.setOpaque(false);
@@ -166,7 +155,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return content;
     }
 
-    // ========== 통계 카드 ==========
+    // 통계 카드
     private JComponent buildStats() {
         JPanel stats = new JPanel(new GridLayout(1, 3, 16, 0));
         stats.setOpaque(false);
@@ -207,14 +196,13 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return card;
     }
 
-    // ========== 방 목록 패널 ==========
+    // 방 목록 패널
     private JComponent buildRoomListPanel() {
         JPanel panel = new RoundedPanel(15);
         panel.setBackground(CARD_BG);
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
         panel.setLayout(new BorderLayout(0, 12));
 
-        // -------- 상단 타이틀 영역 --------
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
 
@@ -249,7 +237,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         top.add(titleBox, BorderLayout.WEST);
         top.add(actions, BorderLayout.EAST);
 
-        // -------- 리스트 영역 --------
         roomList = new JList<>(model);
         roomList.setCellRenderer(new RoomRenderer());
         roomList.setBackground(new Color(250, 250, 250));
@@ -261,7 +248,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         roomList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // 더블클릭 입장 완전 차단
                 if (e.getClickCount() >= 2) {
                     e.consume();
                     return;
@@ -276,14 +262,13 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 int relX = e.getX() - cell.x;
                 int w = cell.width;
 
-                // Renderer 기준(너가 설정한 버튼 크기랑 border 기준)
-                final int RIGHT_PAD = 16;   // RoomRenderer border right
-                final int GAP = 8;          // FlowLayout hgap
+                final int RIGHT_PAD = 16;
+                final int GAP = 8;
                 final int JOIN_W = 72;
                 final int DELETE_W = 64;
 
-                int deleteStartX = w - RIGHT_PAD - DELETE_W;              // 삭제 버튼 시작
-                int joinStartX   = deleteStartX - GAP - JOIN_W;           // 입장 버튼 시작
+                int deleteStartX = w - RIGHT_PAD - DELETE_W;
+                int joinStartX   = deleteStartX - GAP - JOIN_W;
 
                 // 삭제 버튼 영역
                 if (relX >= deleteStartX) {
@@ -311,7 +296,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                     return;
                 }
 
-                // 나머지 영역은 선택만
                 roomList.setSelectedIndex(index);
             }
         });
@@ -357,7 +341,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return panel;
     }
 
-    // ========== 상단 버튼 ==========
+    // 상단 버튼
     private JButton createActionButton(String text, boolean isPrimary) {
         JButton btn = new JButton() {
             private boolean hover = false;
@@ -416,7 +400,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return btn;
     }
 
-    // ========== 방 만들기 다이얼로그 ==========
+    // 방 만들기 다이얼로그
     void showCreateDialog() {
         JTextField tfName = new JTextField();
         tfName.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
@@ -579,7 +563,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
 
             if (lock && password.length() != 4) {
                 JOptionPane.showMessageDialog(
-                        getPopupParent(), // ✅ 채팅창이 열려있으면 채팅창 위로
+                        getPopupParent(),
                         "비밀번호는 4자리 숫자여야 합니다.",
                         "입력 오류",
                         JOptionPane.WARNING_MESSAGE
@@ -599,12 +583,11 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         }
     }
 
-    // ========== 방 입장 ==========
+    // 방 입장
     private void joinSelected() {
         RoomDto r = roomList.getSelectedValue();
         if (r == null || client == null) return;
 
-        // 이미 열린 방이면 앞으로 (+ active 갱신)
         if (openChatFrames.containsKey(r.name)) {
             ChatFrame existingChat = openChatFrames.get(r.name);
             activeChatFrame = existingChat;
@@ -654,7 +637,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         ChatFrame chat = new ChatFrame(nickname, serverLabel + " · " + r.name, this);
         openChatFrames.put(r.name, chat);
 
-        // ✅ 활성 채팅창 추적
         activeChatFrame = chat;
         chat.addWindowFocusListener(new java.awt.event.WindowAdapter() {
             @Override
@@ -683,7 +665,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         chat.setVisible(true);
     }
 
-    // 🔑 비밀번호 입력 다이얼로그
+    // 비밀번호 입력 다이얼로그
     private String showPasswordDialog() {
         JPanel panel = new JPanel(new GridLayout(0, 1, 8, 8));
         panel.setBorder(new EmptyBorder(12, 12, 12, 12));
@@ -709,7 +691,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         panel.add(tfPassword);
 
         int result = JOptionPane.showConfirmDialog(
-                getPopupParent(), // ✅ 채팅창이 열려있으면 채팅창 위로
+                getPopupParent(),
                 panel,
                 "🔒 비밀방 입장",
                 JOptionPane.OK_CANCEL_OPTION,
@@ -720,7 +702,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return null;
     }
 
-    // ========== ChatClient 바인딩 ==========
+    // ChatClient 바인딩
     public void bind(ChatClient client) {
         this.client = client;
         this.client.startReceiving(this);
@@ -732,7 +714,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         client.sendMessage(Constants.CMD_ROOMS_LIST);
     }
 
-    // ========== 메시지 수신 ==========
     @Override
     public void onMessageReceived(String line) {
         System.out.println("[RoomListFrame] 수신: " + line);
@@ -759,10 +740,10 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             String message = line.substring("[System] ".length()).trim();
             System.out.println("[RoomListFrame System] " + message);
 
-            // 🔒 비밀번호 오류 처리
+            // 비밀번호 오류 처리
             if (message.contains("비밀번호가 틀렸습니다") || message.contains("비밀번호 불일치")) {
                 SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
-                        getPopupParent(), // ✅ 부모를 채팅창으로
+                        getPopupParent(),
                         "비밀번호가 틀렸습니다.",
                         "입장 실패",
                         JOptionPane.ERROR_MESSAGE
@@ -772,7 +753,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 return;
             }
 
-            // ✅ 방 입장 성공 메시지 처리
+            // 방 입장 성공 메시지 처리
             if (message.contains("입장하였습니다") && pendingRoomJoin != null) {
                 String roomName = pendingRoomJoin;
 
@@ -797,14 +778,13 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
                 return;
             }
 
-            // 🔔 기타 시스템 메시지: 팝업 parent를 "활성 ChatFrame"으로 (목록이 앞으로 안 튐)
             SwingUtilities.invokeLater(() -> {
                 int type = (message.contains("실패") || message.contains("권한") || message.contains("없습니다"))
                         ? JOptionPane.WARNING_MESSAGE
                         : JOptionPane.INFORMATION_MESSAGE;
 
                 JOptionPane.showMessageDialog(
-                        getPopupParent(), // ✅ RoomListFrame.this -> getPopupParent()
+                        getPopupParent(),
                         message,
                         "시스템 알림",
                         type
@@ -815,14 +795,12 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
             return;
         }
 
-        // 구규격 게임 메시지
         if (line.startsWith("[GAME]")) {
             for (ChatFrame frame : openChatFrames.values()) frame.onMessageReceived(line);
             if (openChatFrames.isEmpty()) gameMessageBuffer.add(line);
             return;
         }
 
-        // 일반 채팅
         for (ChatFrame frame : openChatFrames.values()) frame.onMessageReceived(line);
         if (openChatFrames.isEmpty()) passthroughLog.add(line);
     }
@@ -838,7 +816,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         });
     }
 
-    // ========== 방 목록 적용 ==========
     private void applyRooms(List<RoomDto> rooms) {
         model.clear();
         for (RoomDto r : rooms) model.addElement(r);
@@ -850,7 +827,7 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         lblActiveChats.setText(String.valueOf(active));
     }
 
-    // ========== JSON 파싱 ==========
+    // JSON 파싱
     private List<RoomDto> parseRooms(String json) {
         try {
             List<RoomDto> out = new ArrayList<>();
@@ -915,7 +892,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return v.trim().startsWith("t") || v.trim().startsWith("T");
     }
 
-    // ========== 유틸리티 ==========
     private Icon makeStatusIcon(Color color) {
         int size = 10;
         return new Icon() {
@@ -947,7 +923,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         return new Font("Dialog", style, size);
     }
 
-    // ========== 커스텀 컴포넌트 ==========
     static class RoundedPanel extends JPanel {
         private final int radius;
 
@@ -967,7 +942,6 @@ public class RoomListFrame extends JFrame implements ChatClient.MessageListener 
         }
     }
 
-    // ========== 방 목록 렌더러 ==========
     private class RoomRenderer extends JPanel implements ListCellRenderer<RoomDto> {
         private final JLabel icon = new JLabel("💬");
         private final JLabel name = new JLabel();
