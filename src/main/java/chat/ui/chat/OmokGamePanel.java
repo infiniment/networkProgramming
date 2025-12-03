@@ -105,6 +105,11 @@ public class OmokGamePanel extends JPanel {
         setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
         initBoard();
     }
+
+    public void setMyTurn(boolean myTurn) {
+        this.myTurn = myTurn;
+        updateCursor();
+    }
     private boolean isBoardEmpty() {
         for (int r = 0; r < BOARD_SIZE; r++) {
             for (int c = 0; c < BOARD_SIZE; c++) {
@@ -136,11 +141,6 @@ public class OmokGamePanel extends JPanel {
     public void setOpponentNickname(String opponentNickname) {
         this.opponentNickname = opponentNickname;
         repaint();
-    }
-
-    public void setMyTurn(boolean myTurn) {
-        this.myTurn = myTurn;
-        updateCursor();
     }
 
     public boolean isMyTurn() {
@@ -367,6 +367,7 @@ public class OmokGamePanel extends JPanel {
         System.out.println("[OMOK-PANEL] 턴 변경 → currentPlayer=" + currentPlayer);
     }
 
+    // 실제 전송 프로토콜
     private void sendMoveToServer(int row, int col) {
         if (gameFrame.getClient() != null) {
             String msg = Constants.CMD_GAME_MOVE + " " + row + " " + col;
