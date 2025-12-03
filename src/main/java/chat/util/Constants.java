@@ -10,6 +10,8 @@ public class Constants {
     // 채팅 명령어 클라이언트 -> 서버
     public static final String CMD_ROOMS_LIST = "/rooms";
     public static final String CMD_ROOM_CREATE = "/room.create";
+    public static final String CMD_ROOM_DELETE = "/room-delete";
+    public static final String CMD_LEAVE_ROOM = "/room:leave";
     public static final String CMD_JOIN_ROOM = "/join";
     public static final String CMD_QUIT = "/quit";
     public static final String CMD_TYPING_START = "/typing start";
@@ -26,6 +28,7 @@ public class Constants {
     public static final String CMD_SECRET_OFF = "/secret off";
     public static final String CMD_SILENT = "/silent";
 
+
     // 미니게임 명령어
     public static final String CMD_GOMOKU = "/gomoku";
     public static final String CMD_31 = "/31";
@@ -38,13 +41,11 @@ public class Constants {
     public static final String RESPONSE_GAME_WAITING = "@game:waiting";
     public static final String RESPONSE_GAME_START = "@game:start";
     public static final String RESPONSE_GAME_END = "@game:end";
-    public static final String CMD_ROOM_DELETE = "/room-delete";
-    public static final String CMD_LEAVE_ROOM = "/room:leave";
 
     // 서버에서 클라이언트 이벤트
     public static final String EVT_SECRET_MSG = "@secret:msg";
-    public static final String EVT_SECRET_ON    = "@secret:on";   // "@secret:on {sid} {hostNick}"
-    public static final String EVT_SECRET_OFF   = "@secret:off";  // "@secret:off {sid} {hostNick}"
+    public static final String EVT_SECRET_ON    = "@secret:on";
+    public static final String EVT_SECRET_OFF   = "@secret:off";
     public static final String EVT_SECRET_CLEAR = "@secret:clear";
     public static final String EVT_BOMB         = "@bomb";
 
