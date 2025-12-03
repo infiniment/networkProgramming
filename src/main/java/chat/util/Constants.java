@@ -41,6 +41,8 @@ public class Constants {
     public static final String RESPONSE_GAME_WAITING = "@game:waiting";
     public static final String RESPONSE_GAME_START = "@game:start";
     public static final String RESPONSE_GAME_END = "@game:end";
+    public static final String RESPONSE_GAME_TURN = "@game:turn";
+    public static final String RESPONSE_GAME_UPDATE = "@game:update";
 
     // 서버에서 클라이언트 이벤트
     public static final String EVT_SECRET_MSG = "@secret:msg";

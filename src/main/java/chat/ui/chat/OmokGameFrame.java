@@ -348,8 +348,8 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         }
 
         // 내 색/첫 턴 정보
-        if (line.startsWith("@game:turn")) {
-            String value = line.substring("@game:turn".length()).trim();
+        if (line.startsWith(Constants.RESPONSE_GAME_TURN)) {
+            String value = line.substring(Constants.RESPONSE_GAME_TURN.length()).trim();
             try {
                 int turn = Integer.parseInt(value);
 
@@ -375,8 +375,7 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
                     System.out.println("[OMOK] 게임 시작 - myColor=" + myColor + ", myTurn=" + myTurnNow);
                 });
             } catch (NumberFormatException e) {
-                System.err.println("[OMOK] @game:turn 파싱 오류: " + line);
-            }
+                }
             return;
         }
 

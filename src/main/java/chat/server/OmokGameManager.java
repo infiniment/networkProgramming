@@ -121,16 +121,14 @@ public class OmokGameManager {
                 Thread.sleep(50);
 
                 // 게스트 턴 정보
-                session.opponentHandler.sendMessage("@game:turn 2");
+                session.opponentHandler.sendMessage(Constants.RESPONSE_GAME_TURN + " 2");
                 session.opponentHandler.outWriter().flush();
-                System.out.println("[GAME] 게스트 ← @game:turn 2");
 
                 Thread.sleep(50);
 
                 // 호스트 턴 정보
-                session.hostHandler.sendMessage("@game:turn 1");
+                session.hostHandler.sendMessage(Constants.RESPONSE_GAME_TURN + " 1");
                 session.hostHandler.outWriter().flush();
-                System.out.println("[GAME] 호스트 ← @game:turn 1");
 
                 // 게임 상태 변경
                 session.setState(GameState.PLAYING);

@@ -190,7 +190,7 @@ public class BR31GameManager {
 
         // 첫 턴 플레이어 알림
         String firstPlayer = session.getPlayers().get(0);
-        session.broadcastToAll("@game:turn " + firstPlayer);
+        session.broadcastToAll(Constants.RESPONSE_GAME_TURN + " " + firstPlayer);
 
         System.out.println("[BR31] 첫 턴: " + firstPlayer);
     }
@@ -241,7 +241,7 @@ public class BR31GameManager {
 
             // 모든 플레이어에게 업데이트 전송
             String numbersStr = Arrays.toString(numbers).replaceAll("[\\[\\] ]", "");
-            String updateMsg = "@game:update " + newCount + " " + playerNickname + " " + numbersStr;
+            String updateMsg = Constants.RESPONSE_GAME_UPDATE + newCount + " " + playerNickname + " " + numbersStr;
             session.broadcastToAll(updateMsg);
 
             // 31이면 게임 종료
@@ -253,7 +253,7 @@ public class BR31GameManager {
             // 다음 턴
             session.nextTurn();
             String nextPlayer = session.getCurrentTurnPlayer();
-            session.broadcastToAll("@game:turn " + nextPlayer);
+            session.broadcastToAll(Constants.RESPONSE_GAME_TURN + nextPlayer);
 
             System.out.println("[BR31] 다음 턴: " + nextPlayer);
 

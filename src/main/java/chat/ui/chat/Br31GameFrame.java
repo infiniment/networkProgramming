@@ -620,8 +620,8 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
             return;
         }
 
-        if (line.startsWith("@game:turn ")) {
-            currentTurnPlayer = line.substring("@game:turn ".length()).trim();
+        if (line.startsWith(Constants.RESPONSE_GAME_TURN )) {
+            currentTurnPlayer = line.substring(Constants.RESPONSE_GAME_TURN.length()).trim();
 
             SwingUtilities.invokeLater(() -> {
                 updatePlayerListInGame();
@@ -638,8 +638,8 @@ public class Br31GameFrame extends JFrame implements ChatClient.MessageListener 
             return;
         }
 
-        if (line.startsWith("@game:update ")) {
-            String[] parts = line.substring("@game:update ".length()).split(" ", 3);
+        if (line.startsWith(Constants.RESPONSE_GAME_UPDATE)) {
+            String[] parts = line.substring(Constants.RESPONSE_GAME_UPDATE.length()).split(" ", 3);
             if (parts.length >= 2) {
                 int newCount = Integer.parseInt(parts[0]);
 
