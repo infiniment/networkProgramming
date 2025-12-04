@@ -20,7 +20,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
     private OmokGamePanel gamePanel;
     private JLabel lblCurrentTurn;
 
-    // 🔧 플레이어 섹션용 레이블
     private JLabel lblBlackPlayer;
     private JLabel lblWhitePlayer;
 
@@ -33,10 +32,8 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
 
     private int myColor = 1;
     private int opponentColor = 2;
-
     private boolean gameStarted = false;
 
-    // 🔧 생성자 수정
     public OmokGameFrame(String myNickname, ChatClient client, ChatFrame chatFrame) {
         this.myNickname = myNickname;
         this.client = client;
@@ -61,10 +58,7 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
 
         gamePanel.setGameEnabled(false);
 
-        // 🔧 **이 부분을 생성자 마지막으로 옮김 (setVisible() 전)**
-        System.out.println("[OMOK] 📋 게임 리스너 등록 시작");
         chatFrame.addGameListener(this);
-        System.out.println("[OMOK] ✅ 게임 리스너 등록 완료");
 
         // 이제 게임 참여 요청 (리스너 등록 후)
         sendGameJoinMessage();
@@ -72,15 +66,12 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
-                // ✅ 창 닫힐 때도 리스너 제거
                 if (chatFrame != null) {
                     chatFrame.removeGameListener(OmokGameFrame.this);
-                    System.out.println("[OMOK] 🗑️ 창 닫힘 - 게임 리스너 제거됨");
                 }
             }
         });
     }
-
 
     private void sendGameJoinMessage() {
         if (client != null) {
@@ -88,7 +79,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         }
     }
 
-    // ========== 헤더 ==========
     private JComponent buildHeader() {
         JPanel header = new RoundedPanel(15);
         header.setBackground(CARD_BG);
@@ -104,7 +94,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         return header;
     }
 
-    // ========== 콘텐츠 ==========
     private JComponent buildContent() {
         JPanel content = new JPanel(new BorderLayout(15, 0));
         content.setOpaque(false);
@@ -131,7 +120,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         return content;
     }
 
-    // ========== 정보 패널 ==========
     private JPanel buildInfoPanel() {
         JPanel infoPanel = new RoundedPanel(15);
         infoPanel.setBackground(CARD_BG);
@@ -140,7 +128,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         infoPanel.setPreferredSize(new Dimension(280, 0));
         infoPanel.setMaximumSize(new Dimension(280, Integer.MAX_VALUE));
 
-        // ========== 1. 현재 턴 섹션 ==========
         JLabel lblTurnTitle = new JLabel("🎮 현재 턴");
         lblTurnTitle.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 14));
         lblTurnTitle.setForeground(TEXT_PRIMARY);
@@ -155,7 +142,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         infoPanel.add(lblCurrentTurn);
         infoPanel.add(Box.createVerticalStrut(20));
 
-        // ========== 2. 구분선 ==========
         JSeparator separator1 = new JSeparator();
         separator1.setMaximumSize(new Dimension(240, 1));
         separator1.setForeground(new Color(230, 230, 230));
@@ -163,7 +149,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         infoPanel.add(separator1);
         infoPanel.add(Box.createVerticalStrut(20));
 
-        // ========== 3. 플레이어 섹션 ==========
         JLabel lblPlayersTitle = new JLabel("⚙️ 플레이어");
         lblPlayersTitle.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 14));
         lblPlayersTitle.setForeground(TEXT_PRIMARY);
@@ -171,7 +156,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         infoPanel.add(lblPlayersTitle);
         infoPanel.add(Box.createVerticalStrut(12));
 
-        // 🔧 흑돌 플레이어 (검정 네모)
         lblBlackPlayer = new JLabel("■ " + myNickname);
         lblBlackPlayer.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 12));
         lblBlackPlayer.setForeground(TEXT_PRIMARY);
@@ -179,7 +163,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         infoPanel.add(lblBlackPlayer);
         infoPanel.add(Box.createVerticalStrut(8));
 
-        // 🔧 백돌 플레이어 (흰색 네모)
         lblWhitePlayer = new JLabel("□ 대기 중...");
         lblWhitePlayer.setFont(loadCustomFont("BMHANNAAir_ttf.ttf", Font.PLAIN, 12));
         lblWhitePlayer.setForeground(TEXT_SECONDARY);
@@ -187,7 +170,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         infoPanel.add(lblWhitePlayer);
         infoPanel.add(Box.createVerticalStrut(20));
 
-        // ========== 4. 구분선 ==========
         JSeparator separator2 = new JSeparator();
         separator2.setMaximumSize(new Dimension(240, 1));
         separator2.setForeground(new Color(230, 230, 230));
@@ -195,7 +177,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         infoPanel.add(separator2);
         infoPanel.add(Box.createVerticalStrut(20));
 
-        // ========== 5. 게임 규칙 ==========
         JLabel lblRulesTitle = new JLabel("📋 게임 규칙");
         lblRulesTitle.setFont(loadCustomFont("BMDOHYEON_ttf.ttf", Font.BOLD, 14));
         lblRulesTitle.setForeground(TEXT_PRIMARY);
@@ -223,7 +204,6 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         return infoPanel;
     }
 
-    // ========== 푸터 ==========
     private JComponent buildFooter() {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
         footer.setOpaque(false);
@@ -279,12 +259,10 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         return btn;
     }
 
-    // ========== 게임 종료 시 리스너 제거 ==========
     public void quitGame() {
-        // ✅ 리스너 제거 추가
         if (chatFrame != null) {
             chatFrame.removeGameListener(this);
-            System.out.println("[OMOK] 🗑️ 게임 리스너 제거됨");
+            System.out.println("[OMOK] 게임 리스너 제거됨");
         }
 
         if (client != null) {
@@ -293,24 +271,29 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
         dispose();
     }
 
-    // 🔧 플레이어 정보 업데이트 메서드
     private void updatePlayerInfo() {
-        boolean iAmHost = myNickname.compareTo(opponentNickname) < 0;
-
-        if (iAmHost) {
+        if (opponentNickname == null || opponentNickname.isEmpty()) {
             lblBlackPlayer.setText("■ " + myNickname);
+            lblWhitePlayer.setText("□ -");
             lblBlackPlayer.setForeground(TEXT_PRIMARY);
-            lblWhitePlayer.setText("□ " + opponentNickname);
             lblWhitePlayer.setForeground(TEXT_PRIMARY);
+            return;
+        }
+
+        if (myColor == 1) {
+            lblBlackPlayer.setText("■ " + myNickname);
+            lblWhitePlayer.setText("□ " + opponentNickname);
         } else {
             lblBlackPlayer.setText("■ " + opponentNickname);
-            lblBlackPlayer.setForeground(TEXT_PRIMARY);
             lblWhitePlayer.setText("□ " + myNickname);
-            lblWhitePlayer.setForeground(TEXT_PRIMARY);
         }
+
+        lblBlackPlayer.setForeground(TEXT_PRIMARY);
+        lblWhitePlayer.setForeground(TEXT_PRIMARY);
     }
 
-    // 🔧 현재 턴 업데이트 메서드
+
+    // 현재 턴 업데이트 메서드
     private void updateCurrentTurn() {
         if (!gameStarted) {
             lblCurrentTurn.setText("게임 시작 대기 중...");
@@ -353,76 +336,48 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
                     .trim();
 
             SwingUtilities.invokeLater(() -> {
-                gameStarted = true;
                 opponentNickname = opponentName;
+                gameStarted = true;
 
-                boolean iAmHost = myNickname.compareTo(opponentNickname) < 0;
-                myColor = iAmHost ? 1 : 2;
-                opponentColor = iAmHost ? 2 : 1;
-
-                updatePlayerInfo();
-
-                // ✅ 초기 턴 설정
-                gamePanel.setCurrentPlayer(1);  // 항상 흑돌(1)이 먼저
                 gamePanel.setOpponentNickname(opponentNickname);
-                gamePanel.setGameEnabled(iAmHost);  // 호스트만 활성화
-                gamePanel.setMyTurn(iAmHost);
-
+                updatePlayerInfo();
                 updateCurrentTurn();
                 gamePanel.repaint();
-
-                System.out.println("[OMOK] ✅ 게임 시작 - myColor=" + myColor);
             });
             return;
         }
 
-//        if (line.startsWith("@game:move")) {
-//            String[] parts = line.substring("@game:move".length()).trim().split(" ");
-//            if (parts.length >= 3) {
-//                try {
-//                    int row = Integer.parseInt(parts[0]);
-//                    int col = Integer.parseInt(parts[1]);
-//                    int player = Integer.parseInt(parts[2]);
-//
-//                    SwingUtilities.invokeLater(() -> {
-//                        System.out.println("[OMOK] 돌 배치: (" + row + "," + col + ") 색상=" + player);
-//
-//                        // 돌 놓기
-//                        gamePanel.placeStone(row, col, player);
-//
-//                        // 승리 체크
-//                        if (gamePanel.checkWinAt(row, col, player)) {
-//                            gamePanel.setGameOver(true);
-//                            gamePanel.setWinnerColor(player);
-//                            updateStatus();
-//                            gamePanel.repaint();
-//                            return;
-//                        }
-//
-//                        // ✅ 턴 변경
-//                        gamePanel.changeTurn();
-//
-//                        // ✅ 내 턴이면 활성화
-//                        int nextTurn = gamePanel.getCurrentPlayer();
-//                        boolean myTurnNow = (nextTurn == myColor);
-//
-//                        // 🔧 디버그 로그 추가
-//                        System.out.println("[OMOK] 턴 확인: nextTurn=" + nextTurn +
-//                                ", myColor=" + myColor +
-//                                ", myTurnNow=" + myTurnNow);
-//
-//                        gamePanel.setGameEnabled(myTurnNow);
-//                        gamePanel.setMyTurn(myTurnNow);
-//
-//                        updateStatus();
-//                        gamePanel.repaint();
-//                    });
-//                } catch (NumberFormatException e) {
-//                    System.err.println("돌 놓기 파싱 오류: " + line);
-//                }
-//            }
-//            return;
-//        }
+        // 내 색/첫 턴 정보
+        if (line.startsWith(Constants.RESPONSE_GAME_TURN)) {
+            String value = line.substring(Constants.RESPONSE_GAME_TURN.length()).trim();
+            try {
+                int turn = Integer.parseInt(value);
+
+                SwingUtilities.invokeLater(() -> {
+                    boolean iAmHost = (turn == 1);
+                    myColor = iAmHost ? 1 : 2;
+                    opponentColor = iAmHost ? 2 : 1;
+
+                    gameStarted = true;
+
+                    // 항상 흑돌이 먼저 시작
+                    gamePanel.setCurrentPlayer(1);
+
+                    // 흑돌이면 첫 턴, 백돌이면 기다리기
+                    boolean myTurnNow = (myColor == 1);
+                    gamePanel.setGameEnabled(myTurnNow);
+                    gamePanel.setMyTurn(myTurnNow);
+
+                    updatePlayerInfo();
+                    updateCurrentTurn();
+                    gamePanel.repaint();
+
+                    System.out.println("[OMOK] 게임 시작 - myColor=" + myColor + ", myTurn=" + myTurnNow);
+                });
+            } catch (NumberFormatException e) {
+                }
+            return;
+        }
 
         // 돌 놓기
         if (line.startsWith("@game:move")) {
@@ -436,10 +391,10 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
                     SwingUtilities.invokeLater(() -> {
                         System.out.println("[OMOK] 돌 배치: (" + row + "," + col + ") 색상=" + player);
 
-                        // ✅ 돌 놓기
+                        // 돌 놓기
                         gamePanel.placeStone(row, col, player);
 
-                        // ✅ 승리 체크
+                        // 승리 체크
                         if (gamePanel.checkWinAt(row, col, player)) {
                             gamePanel.setGameOver(true);
                             gamePanel.setWinnerColor(player);
@@ -448,10 +403,10 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
                             return;
                         }
 
-                        // ✅ 턴 변경
+                        // 턴 변경
                         gamePanel.changeTurn();
 
-                        // ✅ 내 턴이면 활성화
+                        // 내 턴이면 활성화
                         int nextTurn = gamePanel.getCurrentPlayer();
                         boolean myTurnNow = (nextTurn == myColor);
                         gamePanel.setGameEnabled(myTurnNow);
@@ -466,14 +421,11 @@ public class OmokGameFrame extends JFrame implements ChatClient.MessageListener 
             }
             return;
         }
-    }
+}
 
     @Override
     public void onDisconnected() {
-        SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(this, "서버 연결이 끊어졌습니다.", "연결 종료", JOptionPane.WARNING_MESSAGE);
-            dispose();
-        });
+        SwingUtilities.invokeLater(this::dispose);
     }
 
     public int getMyColor() { return myColor; }

@@ -5,17 +5,14 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 
-/**
- * RoundedPanel
- * - 둥근 모서리 배경을 그리는 패널
- * - setBackground(...)로 배경색 적용
- */
+// RoundedPanel : 둥근 모서리 배경을 그리는 패널
+
 public class RoundedPanel extends JPanel {
     private final int radius;
 
     public RoundedPanel(int radius) {
         this.radius = radius;
-        setOpaque(false); // 우리가 직접 배경을 그림
+        setOpaque(false);
     }
 
     @Override

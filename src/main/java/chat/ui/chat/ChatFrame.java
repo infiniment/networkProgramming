@@ -5,13 +5,9 @@
     import chat.ui.common.*;
     import chat.util.Constants;
     import chat.ui.chat.message.SecretMessageManager;
-
     import chat.shared.EmojiRegistry;
     import java.util.Map;
-
-    // 새로 분리한 공통/폰트 유틸 임포트
     import chat.ui.fonts.FontManager;
-
     import javax.swing.*;
     import javax.swing.border.EmptyBorder;
     import java.awt.*;
@@ -21,20 +17,14 @@
     import java.util.*;
     import java.util.List;
     import java.util.concurrent.CopyOnWriteArrayList;
-
-    /**
-     * ChatFrame - 고급 채팅 화면
-     * 이모티콘 패널, 폭탄 메시지 타이머, 말풍선 스타일, 미니게임 선택
-     * - 색상/폰트/공통컴포넌트는 Colors, FontManager, RoundedPanel/Border, UiUtils 로 이관
-     */
     public class ChatFrame extends JFrame implements ChatClient.MessageListener {
 
         private final String nickname;
         private final String serverLabel;
 
-        private static final int EMOJI_CHAT_SIZE   = 96; // 채팅에 찍히는 이모티콘 크기(px)
-        private static final int EMOJI_PICKER_SIZE = 56; // 이모티콘 선택창 썸네일 크기(px)
-        private static final int BOMB_ICON_SIZE    = 28; // 폭탄 말풍선 안의 폭탄 아이콘 크기(px)
+        private static final int EMOJI_CHAT_SIZE   = 96;
+        private static final int EMOJI_PICKER_SIZE = 56;
+        private static final int BOMB_ICON_SIZE    = 28;
 
         private ImageIcon bombIcon;
         private ChatClient client;
@@ -43,15 +33,13 @@
 
         private SecretMessageManager secretMgr;
 
-        private JPanel mainPanel;     // 전체 컨테이너
-        private JComponent headerCard;    // 헤더 카드
-        private JComponent chatCard;      // 채팅 카드(스크롤 감싸는 상단 컨테이너)
-        private JComponent inputCard;     // 입력 카드
+        private JPanel mainPanel;
+        private JComponent headerCard;
+        private JComponent chatCard;
+        private JComponent inputCard;
         private JLabel lblRoom;
         private JLabel lblUser;
 
-
-        // UI 컴포넌트
         private JPanel chatContainer;
         private JScrollPane chatScroll;
         private JTextField tfInput;
@@ -65,21 +53,16 @@
         private JButton btnEmoticon;
         private JButton btnBombMessage;
 
-        // 이모티콘 팝업
         private JPanel emoticonPanel;
 
         // 상태
         private boolean typingOn = false;
         private javax.swing.Timer typingStopTimer;
-        private static final int TYPING_START_DEBOUNCE_MS = 300;  // 시작 디바운스
-        private static final int TYPING_STOP_DELAY_MS    = 1500; // 마지막 입력 후 STOP 지연
+        private static final int TYPING_START_DEBOUNCE_MS = 300;
+        private static final int TYPING_STOP_DELAY_MS    = 1500;
         private long lastTypingStartSentAt = 0L;
-
-        // 시크릿 메시지 버킷 : sid -> 해당 sid로 렌더된 컴포넌트 목록
         private Set<String> typingUsers = new HashSet<>();
 
-
-        // 🎮 게임 리스너/버퍼
         private List<ChatClient.MessageListener> gameListeners = new CopyOnWriteArrayList<>();
         private List<String> gameMessageBuffer = new CopyOnWriteArrayList<>();
 
@@ -99,9 +82,9 @@
 
 
 
-            headerCard =  buildHeader();   // ← 반환값 참조 저장하도록 아래 buildHeader 수정
-            chatCard   =  buildChatArea(); // ← 반환값 참조
-            inputCard  =  buildInputArea();// ← 반환값 참조
+            headerCard =  buildHeader();
+            chatCard   =  buildChatArea();
+            inputCard  =  buildInputArea();
 
             mainPanel.add(headerCard, BorderLayout.NORTH);
             mainPanel.add(chatCard, BorderLayout.CENTER);
@@ -110,20 +93,12 @@
 
             addWindowListener(new WindowAdapter() {
                 @Override
-                public void windowClosing(WindowEvent e) {  // windowClosed → windowClosing으로 변경
-//                    // X 버튼을 누르면 뒤로가기와 동일하게 처리
-//                    shouldDisconnect = false;
-//                    if (parentFrame != null) {
-//                        parentFrame.setVisible(true);
-//                    }
-//                    dispose();
-                    // X 눌렀을 때도 방 나가기 + 목록으로
+                public void windowClosing(WindowEvent e) {
                     leaveRoomAndBackToList();
                 }
 
                 @Override
                 public void windowClosed(WindowEvent e) {
-                    // 실제로 창이 닫힌 후 연결 종료 여부 확인
                     if (shouldDisconnect && client != null) {
                         try {
                             client.sendMessage(Constants.CMD_QUIT);
@@ -134,23 +109,21 @@
                 }
             });
 
-            // 🔤 폰트 사전 로딩(깜빡임/지연 방지)
             FontManager.preload();
             secretMgr = new SecretMessageManager(chatContainer, chatScroll, btnSecretMode, nickname, on -> applySecretTheme(on), EMOJI_CHAT_SIZE);
         }
 
-        // ========== 게임 리스너 관리 ==========
         public void addGameListener(ChatClient.MessageListener listener) {
-            System.out.println("[ChatFrame] 🎮 게임 리스너 등록 시작: " +
+            System.out.println("[ChatFrame] 게임 리스너 등록 시작: " +
                     listener.getClass().getSimpleName());
 
             synchronized (gameListeners) {
                 gameListeners.add(listener);
-                System.out.println("[ChatFrame] ✅ 리스너 등록 완료 (총 " + gameListeners.size() + "개)");
+                System.out.println("[ChatFrame] 리스너 등록 완료 (총 " + gameListeners.size() + "개)");
             }
 
             // 버퍼 즉시 비우기
-            System.out.println("[ChatFrame] 📊 버퍼된 게임 메시지 개수: " + gameMessageBuffer.size());
+            System.out.println("[ChatFrame] 버퍼된 게임 메시지 개수: " + gameMessageBuffer.size());
             if (!gameMessageBuffer.isEmpty()) {
                 java.util.List<String> bufferCopy = new java.util.ArrayList<>(gameMessageBuffer);
                 for (String msg : bufferCopy) {
@@ -169,7 +142,7 @@
             gameListeners.remove(listener);
         }
 
-        // ========== 헤더 영역 ==========
+        // 헤더 영역
         private JComponent buildHeader() {
             JPanel header = new RoundedPanel(15);
             header.setBackground(Colors.CARD_BG);
@@ -178,7 +151,6 @@
             header.setPreferredSize(new Dimension(0, 70));
             lblRoom = new JLabel(serverLabel);
 
-            // 왼쪽 - 뒤로가기 + 방 정보
             JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
             leftPanel.setOpaque(false);
 
@@ -214,11 +186,6 @@
             btnBack.setContentAreaFilled(false);
             btnBack.setCursor(new Cursor(Cursor.HAND_CURSOR));
             btnBack.setOpaque(false);
-//            btnBack.addActionListener(e -> {
-//                shouldDisconnect = false;
-//                if (parentFrame != null) parentFrame.setVisible(true);
-//                dispose();
-//            });
             btnBack.addActionListener(e -> leaveRoomAndBackToList());
 
             JPanel roomInfo = new JPanel(new GridLayout(2, 1, 0, 2));
@@ -238,7 +205,7 @@
             leftPanel.add(btnBack);
             leftPanel.add(roomInfo);
 
-            JButton btnExit = new JButton() {  // ← 텍스트 제거
+            JButton btnExit = new JButton() {
                 private boolean hover = false;
                 {
                     addMouseListener(new MouseAdapter() {
@@ -264,7 +231,7 @@
                     super.paintComponent(g);
                 }
             };
-            btnExit.setText(null);  // ← 기본 텍스트 제거
+            btnExit.setText(null);
             btnExit.setPreferredSize(new Dimension(60, 26));
             btnExit.setFocusPainted(false);
             btnExit.setBorderPainted(false);
@@ -273,7 +240,6 @@
             btnExit.setOpaque(false);
             btnExit.addActionListener(e -> leaveRoomAndBackToList());
 
-            // 오른쪽 - 시크릿 모드 + 미니게임 + 상태 + 닉네임
             JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
             rightPanel.setOpaque(false);
 
@@ -309,7 +275,7 @@
             return wrapper;
         }
 
-        // ========== 채팅 영역 ==========
+        // 채팅 영역
         private JComponent buildChatArea() {
             JPanel container = new RoundedPanel(15);
             container.setBackground(Colors.CARD_BG);
@@ -336,19 +302,16 @@
             return container;
         }
 
-        // ========== 입력 영역 ==========
+        // 입력 영역
         private JComponent buildInputArea() {
             JPanel inputPanel = new RoundedPanel(15);
             inputPanel.setBackground(Colors.CARD_BG);
             inputPanel.setBorder(new EmptyBorder(16, 20, 16, 20));
             inputPanel.setLayout(new BorderLayout(12, 0));
 
-            // 왼쪽 - 부가 기능 버튼들
             JPanel leftButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
             leftButtons.setOpaque(false);
 
-            // 이모티콘 버튼 - 이미지로 변경
-            // 이모티콘 버튼 - 이미지 + 테두리
             btnEmoticon = new JButton() {
                 private boolean hover = false;
                 {
@@ -363,18 +326,15 @@
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                    // 배경 (호버 시 살짝 어둡게)
                     if (hover) {
                         g2.setColor(new Color(245, 245, 245));
                         g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
                     }
 
-                    // 테두리
                     g2.setColor(hover ? Colors.PRIMARY : Colors.INPUT_BORDER);
                     g2.setStroke(new BasicStroke(2));
                     g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
 
-                    // 이미지 로드 및 그리기
                     ImageIcon icon = loadImageIcon("images/emoji.png", 35);
                     if (icon != null) {
                         int x = (getWidth() - icon.getIconWidth()) / 2;
@@ -394,7 +354,6 @@
             btnEmoticon.addActionListener(e -> openEmojiPicker());
             leftButtons.add(btnEmoticon);
 
-// 폭탄 메시지 버튼 - 이미지 + 테두리
             btnBombMessage = new JButton() {
                 private boolean hover = false;
                 {
@@ -409,7 +368,7 @@
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                    // 배경 (호버 시 살짝 어둡게)
+                    // 배경
                     if (hover) {
                         g2.setColor(new Color(245, 245, 245));
                         g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
@@ -499,13 +458,12 @@
             }
         }
 
-        // ========== 이모티콘 패널 ==========
+        // 이모티콘 패널
         private void toggleEmoticonPanel() {
             if (emoticonPanel == null) return;
             boolean visible = !emoticonPanel.isVisible();
             emoticonPanel.setVisible(visible);
 
-            // 높이 재계산 & 리페인트
             inputCard.revalidate();
             inputCard.repaint();
         }
@@ -580,76 +538,6 @@
             return loadIconScaled(path, size);
         }
 
-
-        // ========== 폭탄 메시지 다이얼로그 ==========
-    //    private void showBombMessageDialog() {
-    //        JDialog dialog = new JDialog(this, "폭탄 메시지", true);
-    //        dialog.setLayout(new BorderLayout(10, 10));
-    //        dialog.setSize(350, 250);
-    //        dialog.setLocationRelativeTo(this);
-    //
-    //        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-    //        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-    //        mainPanel.setBackground(Color.WHITE);
-    //
-    //        JLabel title = new JLabel("전달하세요", JLabel.CENTER);
-    //        title.setFont(FontManager.get("BMDOHYEON_ttf.ttf", Font.BOLD, 16));
-    //        title.setForeground(Colors.TEXT_PRIMARY);
-    //
-    //        JPanel timerPanel = new JPanel(new BorderLayout(10, 10));
-    //        timerPanel.setOpaque(false);
-    //
-    //        JLabel timerLabel = new JLabel("자동삭제 시간");
-    //        timerLabel.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 13));
-    //
-    //        JComboBox<String> timerCombo = new JComboBox<>(new String[]{"10초", "30초", "1분", "5분"});
-    //        timerCombo.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 13));
-    //
-    //        timerPanel.add(timerLabel, BorderLayout.WEST);
-    //        timerPanel.add(timerCombo, BorderLayout.CENTER);
-    //
-    //        JTextArea messageArea = new JTextArea(3, 20);
-    //        messageArea.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 13));
-    //        messageArea.setLineWrap(true);
-    //        messageArea.setWrapStyleWord(true);
-    //        messageArea.setBorder(BorderFactory.createCompoundBorder(
-    //                BorderFactory.createLineBorder(Colors.INPUT_BORDER, 1),
-    //                new EmptyBorder(8, 8, 8, 8)
-    //        ));
-    //        JScrollPane scrollPane = new JScrollPane(messageArea);
-    //
-    //        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-    //        buttonPanel.setOpaque(false);
-    //
-    //        JButton btnCancel = createDialogButton("취소", new Color(149, 165, 166));
-    //        btnCancel.addActionListener(e -> dialog.dispose());
-    //
-    //        JButton btnSend = createDialogButton("전송", Colors.PRIMARY);
-    //        btnSend.addActionListener(e -> {
-    //            String msg = messageArea.getText().trim();
-    //            if (!msg.isEmpty()) {
-    //                int seconds = getSecondsFromCombo((String) timerCombo.getSelectedItem());
-    //                sendBombMessage(msg, seconds);
-    //                dialog.dispose();
-    //            }
-    //        });
-    //
-    //        buttonPanel.add(btnCancel);
-    //        buttonPanel.add(btnSend);
-    //
-    //        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
-    //        centerPanel.setOpaque(false);
-    //        centerPanel.add(timerPanel, BorderLayout.NORTH);
-    //        centerPanel.add(scrollPane, BorderLayout.CENTER);
-    //
-    //        mainPanel.add(title, BorderLayout.NORTH);
-    //        mainPanel.add(centerPanel, BorderLayout.CENTER);
-    //        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
-    //
-    //        dialog.add(mainPanel);
-    //        dialog.setVisible(true);
-    //    }
-
         private void showBombMessageDialog() {
             JDialog dialog = new JDialog(this, "폭탄 메시지", Dialog.ModalityType.DOCUMENT_MODAL);
             dialog.setLayout(new BorderLayout(10, 10));
@@ -720,14 +608,8 @@
         }
 
 
-        // ========== 게임 선택 모달 ==========
+        // 게임 선택 모달
         private void showGameSelectionDialog() {
-    //        JDialog dialog = new JDialog(this, "게임 선택", true);
-    //        dialog.setLayout(new BorderLayout(10, 10));
-    //        dialog.setSize(535, 320);
-    //        dialog.setLocationRelativeTo(this);
-    //        dialog.setResizable(false);
-            // 문서 모달(해당 프레임만 블록)
             JDialog dialog = new JDialog(this, "게임 선택", false);
             dialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL); // 또는 MODELESS
             dialog.setLayout(new BorderLayout(10, 10));
@@ -850,7 +732,6 @@
                 omokGame.setVisible(true);
                 addSystemMessage("🎮 " + nickname + "님이 오목 게임에 참여하였습니다.");
             } else if (gameType.equals("br31")) {
-                // ✅ BR31 게임 창 열기
                 Br31GameFrame br31Game = new Br31GameFrame(nickname, client, this);
                 br31Game.setAlwaysOnTop(true);
                 br31Game.requestFocus();
@@ -868,8 +749,6 @@
                 default -> 10;
             };
         }
-
-        // ========== 다이얼로그 버튼 ==========
         private JButton createDialogButton(String text, Color color) {
             JButton btn = new JButton(text) {
                 private boolean hover = false;
@@ -899,8 +778,6 @@
             btn.setOpaque(false);
             return btn;
         }
-
-        // ========== 시크릿 모드 버튼 ==========
         private JToggleButton createSecretModeButton() {
             JToggleButton btn = new JToggleButton() {  // ← 텍스트 제거
                 @Override
@@ -921,7 +798,7 @@
                     super.paintComponent(g);
                 }
             };
-            btn.setText(null);  // ← 기본 텍스트 제거
+            btn.setText(null);
             btn.setPreferredSize(new Dimension(65, 30));
             btn.setMinimumSize(new Dimension(65, 30));
             btn.setMaximumSize(new Dimension(65, 30));
@@ -941,14 +818,13 @@
                     secretMgr.optimisticOn();
                     sendAsync(Constants.CMD_SECRET_ON);
                 } else {
-                    // 시크릿 OFF (중복 clear 금지!)
+                    // 시크릿 OFF
                     String sid = secretMgr.getCurrentSid();
-                    secretMgr.optimisticOff();          // 내부에서 clear 실행됨
+                    secretMgr.optimisticOff();
                     sendAsync(Constants.CMD_SECRET_OFF);
 
                 }
 
-                // 버튼 활성화 및 포커스 복원은 마지막에 한 번만
                 SwingUtilities.invokeLater(() -> {
                     btn.setEnabled(true);
                     tfInput.requestFocusInWindow();
@@ -958,9 +834,8 @@
             return btn;
         }
 
-        // ========== 미니게임 버튼 ==========
         private JButton createMiniGameButton() {
-            JButton btn = new JButton() {  // ← 텍스트 제거
+            JButton btn = new JButton() {
                 private boolean hover = false;
                 {
                     addMouseListener(new MouseAdapter() {
@@ -986,7 +861,7 @@
                     super.paintComponent(g);
                 }
             };
-            btn.setText(null);  // ← 기본 텍스트 제거
+            btn.setText(null);
             btn.setPreferredSize(new Dimension(40, 30));
             btn.setMinimumSize(new Dimension(40, 30));
             btn.setMaximumSize(new Dimension(40, 30));
@@ -1000,9 +875,8 @@
             return btn;
         }
 
-        // ========== 아이콘 버튼 ==========
         private JButton createIconButton(String text) {
-            JButton btn = new JButton() {  // ← 생성자에서 텍스트 제거
+            JButton btn = new JButton() {
                 private boolean hover = false;
                 {
                     addMouseListener(new MouseAdapter() {
@@ -1018,7 +892,6 @@
                     g2.setColor(hover ? Colors.INPUT_BORDER : Colors.INPUT_BG);
                     g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
 
-                    // ✅ 텍스트 그리기 추가
                     g2.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
                     g2.setColor(Colors.TEXT_PRIMARY);
                     FontMetrics fm = g2.getFontMetrics();
@@ -1030,7 +903,7 @@
                     super.paintComponent(g);
                 }
             };
-            btn.setText(null);  // ← 기본 텍스트 제거
+            btn.setText(null);
             btn.setForeground(Colors.TEXT_PRIMARY);
             btn.setPreferredSize(new Dimension(50, 45));
             btn.setFocusPainted(false);
@@ -1041,9 +914,8 @@
             return btn;
         }
 
-        // ========== 전송 버튼 ==========
         private JButton createSendButton() {
-            JButton btn = new JButton() {  // ← 텍스트 제거
+            JButton btn = new JButton() {
                 private boolean hover = false;
                 private boolean pressed = false;
                 {
@@ -1085,77 +957,10 @@
             btn.setOpaque(false);
             return btn;
         }
-
-        // ========== 메시지 전송 ==========
-    //    private void sendMessage() {
-    //        String msg = tfInput.getText().trim();
-    //        if (msg.isEmpty() || client == null) return;
-    //
-    //        if (msg.matches("^:[a-z_]+:$")) {
-    //            String packet = Constants.PKG_EMOJI + " " + msg;
-    //            client.sendMessage(packet);
-    //            System.out.println("[CLIENT] 이모티콘 전송: " + packet);
-    //        } else if (msg.matches("^[a-z_]+$") && msg.contains("_")) {
-    //            String packet = Constants.PKG_STICKER + " " + msg;
-    //            client.sendMessage(packet);
-    //            System.out.println("[CLIENT] 스티커 전송: " + packet);
-    //        } else {
-    //            client.sendMessage(msg);
-    //        }
-    //
-    //        addMyMessage(msg, isSecretMode);
-    //        tfInput.setText("");
-    //        sendTypingStatus(false);
-    //    }
-//        private void sendMessage() {
-//            String msg = tfInput.getText().trim();
-//            if (msg.isEmpty() || client == null) return;
-//
-//            // 슬래시 커맨드는 버블 만들지 않음
-//            if (msg.startsWith("/")) {
-//                sendAsync(msg);
-//                tfInput.setText("");
-//                sendTypingStatus(false);
-//                return;
-//            }
-//
-//            boolean secretOn = secretMgr != null && secretMgr.isSecretOn();
-//            boolean isEmoji = msg.matches("^:[a-z_]+:$") && EmojiRegistry.findEmoji(msg) != null;
-//
-//            String toSend = msg;
-//            // :code: 형태 + 레지스트리 존재 → 이모티콘 패킷
-//            if (isEmoji) {
-//                toSend = Constants.PKG_EMOJI + " " + msg;
-//            }
-//
-//            // === 로컬 렌더링 ===
-//            if (secretOn) {
-//                if (isEmoji) {
-//                    secretMgr.addMySecretEmoji(msg);   // 시크릿 이모지
-//                } else {
-//                    secretMgr.addMySecretEcho(msg);    // 시크릿 텍스트
-//                }
-//            } else {
-//                if (isEmoji) {
-//                    addMyEmojiMessage(msg);            // 일반 이모지
-//                } else {
-//                    addMyMessage(msg, false);          // 일반 텍스트
-//                }
-//            }
-//
-//            // 2) 전송은 백그라운드로
-//            final String payload = toSend;
-//            sendAsync(payload);
-//
-//            tfInput.setText("");
-//            sendTypingStatus(false);
-//        }
-
         private void sendMessage() {
             String msg = tfInput.getText().trim();
             if (msg.isEmpty() || client == null) return;
 
-            // 슬래시 커맨드는 버블 만들지 않음
             if (msg.startsWith("/")) {
                 sendAsync(msg);
                 tfInput.setText("");
@@ -1167,13 +972,10 @@
             boolean isEmoji = msg.matches("^:[a-z_]+:$") && EmojiRegistry.findEmoji(msg) != null;
 
             String toSend = msg;
-            // :code: 형태 + 레지스트리 존재 → 이모티콘 패킷
             if (isEmoji) {
                 toSend = Constants.PKG_EMOJI + " " + msg;
             }
 
-            // === 로컬 렌더링 ===
-            // 시크릿 모드일 때만 로컬에서 바로 그리기
             if (secretOn) {
                 if (isEmoji) {
                     secretMgr.addMySecretEmoji(msg);   // 시크릿 이모지
@@ -1181,8 +983,6 @@
                     secretMgr.addMySecretEcho(msg);    // 시크릿 텍스트
                 }
             }
-
-            // 2) 전송은 백그라운드로
             final String payload = toSend;
             sendAsync(payload);
 
@@ -1192,11 +992,10 @@
 
         private void sendBombMessage(String msg, int seconds) {
             if (client == null) return;
-    //        client.sendMessage(Constants.CMD_BOMB + " " + seconds + " " + msg);
             sendAsync(Constants.CMD_BOMB + " " + seconds + " " + msg);
         }
 
-        // ========== 타이핑 상태 ==========
+        // 타이핑 상태
         private void sendTypingStatus(boolean typing) {
             if (client == null) return;
 
@@ -1213,7 +1012,7 @@
                     if (typingOn && client != null) {
                         sendAsync(Constants.CMD_TYPING_STOP);
                     }
-    //                    client.sendMessage(Constants.CMD_TYPING_STOP);
+    //
                     typingOn = false;
                 });
                 typingStopTimer.setRepeats(false);
@@ -1221,7 +1020,7 @@
             } else {
                 if (typingStopTimer != null && typingStopTimer.isRunning()) typingStopTimer.stop();
                 if (typingOn) {
-    //                client.sendMessage(Constants.CMD_TYPING_STOP);
+    //
                     sendAsync(Constants.CMD_TYPING_STOP);
                 }
                 typingOn = false;
@@ -1241,7 +1040,7 @@
             });
         }
 
-        // ========== 시크릿 모드 알림 ==========
+        // 시크릿 모드 알림
         private void showSecretModeNotice() {
             commitChat(() -> {
                 JPanel notice = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -1258,7 +1057,7 @@
             });
         }
 
-        // ========== 메시지 말풍선 출력 ==========
+        // 메시지 말풍선 출력
         private void addMyMessage(String text, boolean isSecret) {
             commitChat(() -> {
                 JPanel messagePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
@@ -1292,7 +1091,6 @@
                 timeLabel.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
                 timeLabel.setForeground(Colors.TEXT_SECONDARY);
 
-                // 🔥 폭탄 아이콘 + 메시지가 들어간 버블
                 JPanel bubble = createBombBubble(text, /*mine*/ true);
 
                 messagePanel.add(timeLabel);
@@ -1311,7 +1109,6 @@
                 }
             }, seconds * 1000L);
         }
-
 
         private void addOtherMessage(String user, String text) {
             commitChat( () -> {
@@ -1396,7 +1193,7 @@
             bubble.setLayout(new FlowLayout(FlowLayout.LEFT, 6, 4));
             bubble.setBorder(new EmptyBorder(6, 10, 6, 10));
 
-            // 아이콘 (없으면 💣 텍스트로 대체)
+            // 아이콘
             ImageIcon icon = getBombIcon();
             if (icon != null) {
                 JLabel iconLabel = new JLabel(icon);
@@ -1407,7 +1204,6 @@
                 bubble.add(fallback);
             }
 
-            // 메시지 텍스트
             JLabel msgLabel = new JLabel("<html><body style='width: 260px'>" + text + "</body></html>");
             msgLabel.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 14));
             msgLabel.setForeground(Color.WHITE);
@@ -1436,12 +1232,10 @@
                 }
             };
         }
-
         private String getCurrentTime() {
             return new SimpleDateFormat("HH:mm").format(new Date());
         }
 
-        // ========== 시스템 메시지 ==========
         public void addSystemMessage(String message) {
             addOtherMessage("System", message);
         }
@@ -1451,7 +1245,7 @@
             SwingUtilities.invokeLater(() -> lblMembers.setText("참여자 " + count + "명"));
         }
 
-        // ========== ChatClient 바인딩 ==========
+        // ChatClient 바인딩
         public void bind(ChatClient client) {
             this.client = client;
             SwingUtilities.invokeLater(() -> {
@@ -1461,12 +1255,11 @@
                 tfInput.setEnabled(true);
                 tfInput.requestFocusInWindow();
 
-                // ✅ 방 입장 후 참여자 정보 자동 요청
+                // 방 입장 후 참여자 정보 자동 요청
                 if (this.client != null) {
-                    // 약간의 딜레이 후 요청 (서버 연결 안정화)
                     new Thread(() -> {
                         try {
-                            Thread.sleep(500); // 0.5초 대기
+                            Thread.sleep(500);
                             this.client.sendMessage("/who");
                         } catch (InterruptedException ignored) {}
                     }).start();
@@ -1481,13 +1274,10 @@
 
         @Override
         public void onMessageReceived(String line) {
-            // 방 목록 응답은 채팅창에 표시하지 않음
             if (line.startsWith(Constants.RESPONSE_ROOMS + " ") || line.startsWith("@rooms ")) return;
 
-            // ✅ 참여자 정보 업데이트 추가 (여기!)
             if (line.startsWith("[System] 참여자 (")) {
                 try {
-                    // "[System] 참여자 (3): nick1, nick2, nick3" 형식에서 숫자 추출
                     int start = line.indexOf("(") + 1;
                     int end = line.indexOf(")");
                     if (start > 0 && end > start) {
@@ -1498,14 +1288,12 @@
                 } catch (Exception e) {
                     System.err.println("참여자 수 파싱 실패: " + e.getMessage());
                 }
-                // 시스템 메시지로도 표시
                 addSystemMessage(line.substring("[System] ".length()));
                 return;
             }
 
             // 폭탄 이벤트
             if (line.startsWith(Constants.EVT_BOMB + " ")) {
-                // 서버 포맷: "@bomb {sec} {nick}: {msg}"
                 String payload = line.substring((Constants.EVT_BOMB + " ").length()).trim();
 
                 // sec 추출
@@ -1516,7 +1304,6 @@
                     try { sec = Integer.parseInt(payload.substring(0, sp)); } catch (Exception ignored) {}
                     rest = payload.substring(sp + 1).trim();
                 }
-
                 // {nick}: {msg} 분리
                 String nick = extractUsername(rest);
                 String msg  = extractMessage(rest);
@@ -1524,9 +1311,9 @@
 
                 // UI 갱신은 내부에서 commitChat으로 처리됨
                 if (nick.equals(this.nickname)) {
-                    addBombMessage(msg, sec);            // 내 메시지(오른쪽)
+                    addBombMessage(msg, sec);
                 } else {
-                    addOtherBombMessage(nick, msg, sec); // 상대 메시지(왼쪽)
+                    addOtherBombMessage(nick, msg, sec);
                 }
                 return;
             }
@@ -1537,7 +1324,6 @@
                 String sid = sp.length > 1 ? sp[1] : null;
                 String hostNick = sp.length > 2 ? sp[2] : null;
 
-                System.out.printf("[DEBUG] secret:on sid=%s host=%s myNick=%s%n", sid, hostNick, nickname);
                 secretMgr.onSecretOn(sid);
                 return;
             }
@@ -1548,18 +1334,15 @@
                 String sid = sp.length > 1 ? sp[1] : null;
                 String hostNick = sp.length > 2 ? sp[2] : null;
 
-                System.out.printf("[DEBUG] secret:off sid=%s host=%s myNick=%s%n", sid, hostNick, nickname);
                 secretMgr.onSecretOff();
                 return;
             }
-
             // @secret:clear {sid}
             if (line.startsWith(chat.util.Constants.EVT_SECRET_CLEAR)) {
                 String sid = line.substring(chat.util.Constants.EVT_SECRET_CLEAR.length()).trim();
                 secretMgr.onSecretClear(sid);
                 return;
             }
-
             // @secret:msg {sid} {nick}: {msg}
             if (line.startsWith(chat.util.Constants.EVT_SECRET_MSG)) {
                 String rest = line.substring(chat.util.Constants.EVT_SECRET_MSG.length()).trim();
@@ -1571,7 +1354,6 @@
                     String msg  = extractMessage(payload);
                     if (user != null && msg != null) {
                         if (user.equals(nickname)) {
-                            // 이미 로컬에서 렌더했으므로 에코는 무시 (중복 방지)
                             return;
                         } else {
                             secretMgr.onSecretMsg(sid, user, msg);
@@ -1581,27 +1363,22 @@
                 return;
             }
 
-
-            // 게임 선택 모달 트리거 (신규 규격)
             if (line.startsWith("@game:menu")) {
                 SwingUtilities.invokeLater(this::showGameSelectionDialog);
                 return;
             }
-            // 하위호환: 예전 서버가 "[GAME]"을 보낸 경우도 모달 오픈
             if (line.startsWith("[GAME]")) {
                 SwingUtilities.invokeLater(this::showGameSelectionDialog);
                 return;
             }
-            // (혹시 구버전 서버에서 "@rooms "로 보낸다면 아래도 함께)
             if (line.startsWith("@rooms ")) return;
-            System.out.println("[ChatFrame] 📥 onMessageReceived: " + line + " / listeners=" + gameListeners.size());
+            System.out.println("[ChatFrame] onMessageReceived: " + line + " / listeners=" + gameListeners.size());
             if (line.startsWith("@game:")) {
                 handleGameMessage(line);
                 return;
             }
             parseAndDisplayMessage(line);
         }
-
         private void addOtherBombMessage(String user, String text, int seconds) {
             final JPanel[] holder = new JPanel[1];
             commitChat(() -> {
@@ -1625,9 +1402,7 @@
                 JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
                 row.setOpaque(false);
 
-                // 폭탄 아이콘 + 메시지가 들어간 버블
                 JPanel bubble = createBombBubble(text, /*mine*/ false);
-
 
                 JLabel time = new JLabel(getCurrentTime());
                 time.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
@@ -1671,27 +1446,27 @@
             line = line.trim();
             if (line.isEmpty()) return;
 
-            // 0) 이모티콘 JSON / 스티커 JSON / 패키지 헤더 등은 전부 무시
+            // 이모티콘 JSON, 스티커 JSON, 패키지 헤더 등은 전부 무시
             if (line.startsWith("{")
                     || line.startsWith("1,{")
                     || line.startsWith("1,\"")
                     || line.contains("\"type\":\"emoji\"")
                     || line.contains("\"type\":\"sticker\"")
-                    || line.startsWith(Constants.PKG_EMOJI)    // "@PKG_EMOJI ..."
-                    || line.startsWith(Constants.PKG_STICKER)  // "@PKG_STICKER ..."
+                    || line.startsWith(Constants.PKG_EMOJI)
+                    || line.startsWith(Constants.PKG_STICKER)
                     || line.startsWith("[EMOJI]")
                     || line.startsWith("[STICKER]")) {
                 return;
             }
 
-            // 1) 시스템 메시지
+            // 시스템 메시지
             if (line.startsWith("[System] ")) {
                 String message = line.substring("[System] ".length()).trim();
                 addSystemMessage(message);
                 return;
             }
 
-            // 2) 타이핑 상태
+            // 타이핑 상태
             if (line.contains(Constants.CMD_TYPING_START) || line.contains(Constants.CMD_TYPING_STOP)) {
                 String status = line.contains(Constants.CMD_TYPING_START)
                         ? Constants.CMD_TYPING_START
@@ -1706,7 +1481,6 @@
                 return;
             }
 
-            // 3) "닉네임: 내용" 구조 아닌 건 그냥 시스템성 문장으로 처리
             int idx = line.indexOf(':');
             if (idx <= 0) {
                 addSystemMessage(line);
@@ -1716,7 +1490,7 @@
             String user = line.substring(0, idx).trim();
             String payload = line.substring(idx + 1).trim(); // 내용 부분
 
-            // 4) 이모티콘 메시지 (형식: "nick: @PKG_EMOJI :code:")
+            // 이모티콘 메시지
             if (payload.startsWith(Constants.PKG_EMOJI)) {
                 String code = payload.substring(Constants.PKG_EMOJI.length()).trim(); // ":doing:" 같은 코드
 
@@ -1730,19 +1504,17 @@
                 return;
             }
 
-            // 5) 일반 텍스트 메시지
+            // 일반 텍스트 메시지
             if (payload.isEmpty()) {
                 return;
             }
 
             if (user.equals(nickname)) {
-                // 여기서 과거에 내가 보낸 메시지도 다시 그려줌
                 addMyMessage(payload, false);
             } else {
                 addOtherMessage(user, payload);
             }
         }
-
 
         private String extractUsername(String line) {
             int idx = line.indexOf(":");
@@ -1766,7 +1538,6 @@
             });
         }
 
-
         // 이미지 로드
         private ImageIcon loadGameImage(String filename) {
             try {
@@ -1786,7 +1557,6 @@
         private void applySecretTheme(boolean on) {
             SwingUtilities.invokeLater(() -> {
                 if (on) {
-                    // 시크릿 모드도 배경은 일반 모드와 동일하게 유지
                     mainPanel.setBackground(Colors.BG_COLOR);
                     headerCard.setBackground(Colors.CARD_BG);
                     chatCard.setBackground(Colors.CARD_BG);
@@ -1795,22 +1565,18 @@
                     chatContainer.setBackground(Colors.BG_COLOR);
                     chatScroll.getViewport().setBackground(Colors.BG_COLOR);
 
-                    // 텍스트 컬러도 기존 그대로 사용 (원하면 약간만 바꿔도 ok)
                     lblRoom.setForeground(Colors.TEXT_PRIMARY);
                     lblUser.setForeground(Colors.TEXT_PRIMARY);
                     lblStatusText.setForeground(Colors.TEXT_SECONDARY);
                     lblTypingIndicator.setForeground(Colors.TEXT_SECONDARY);
 
-                    // 상태 아이콘만 포인트 컬러로 변경해서 "시크릿 ON" 티 내기
                     lblStatusIcon.setIcon(UiUtils.makeStatusIcon(Colors.SECRET_ACCENT));
 
-                    // 입력창: 점선 테두리 + 기존 배경/텍스트
                     tfInput.setBackground(Colors.INPUT_BG);
                     tfInput.setForeground(Colors.TEXT_PRIMARY);
                     tfInput.setBorder(new DashedRoundedBorder(10, Colors.SECRET_ACCENT));
 
                 } else {
-                    // 🔄 일반 모드 복원
                     mainPanel.setBackground(Colors.BG_COLOR);
                     headerCard.setBackground(Colors.CARD_BG);
                     chatCard.setBackground(Colors.CARD_BG);
@@ -1844,7 +1610,7 @@
                 chatContainer.repaint();
                 SwingUtilities.invokeLater(() -> {
                     JScrollBar v = chatScroll.getVerticalScrollBar();
-                    v.setValue(v.getMaximum()); // 맨 아래로
+                    v.setValue(v.getMaximum());
                 });
             };
             if (SwingUtilities.isEventDispatchThread()) apply.run();
@@ -1885,12 +1651,10 @@
                 timeLabel.setFont(FontManager.get("BMHANNAAir_ttf.ttf", Font.PLAIN, 10));
                 timeLabel.setForeground(Colors.TEXT_SECONDARY);
 
-                // 말풍선 없이 이미지 라벨만
                 JLabel emojiLabel = new JLabel(icon);
-                // 큰 이미지라 여백도 살짝
+
                 emojiLabel.setBorder(new EmptyBorder(6, 6, 6, 6));
 
-                // 시간-이모지 순서는 말풍선 메시지와 동일 정렬
                 messagePanel.add(timeLabel);
                 messagePanel.add(emojiLabel);
 
@@ -1900,23 +1664,21 @@
         }
 
         private void leaveRoomAndBackToList() {
-            // 이 창을 닫을 때는 "연결 끊지 않는다" 플래그
             shouldDisconnect = false;
 
-            // 1) 서버에 방 나가기 명령
+            // 서버에 방 나가기 명령
             if (client != null) {
                 sendAsync(Constants.CMD_LEAVE_ROOM);
             }
 
-            // 2) 방 목록 창 다시 보여주기 + 활성화
+            // 방 목록 창 다시 보여주기
             if (parentFrame != null) {
                 parentFrame.setVisible(true);
-                parentFrame.setEnabled(true);        // 혹시 입장할 때 disable 해놨다면 다시 활성화
+                parentFrame.setEnabled(true);
                 parentFrame.toFront();
                 parentFrame.requestFocus();
             }
 
-            // 3) 현재 채팅 창 닫기
             dispose();
         }
 
@@ -1941,7 +1703,6 @@
             dlg.setLocationRelativeTo(this);
             dlg.setVisible(true);
         }
-
 
         private void addOtherEmojiMessage(String user, String code) {
             String path = EmojiRegistry.findEmoji(code);
@@ -1990,6 +1751,4 @@
                 chatContainer.add(Box.createVerticalStrut(10));
             });
         }
-
-
     }

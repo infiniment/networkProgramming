@@ -11,15 +11,9 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.InputStream;
 
-/**
- * 로그인 화면
- * - 가운데 정렬
- * - 한글 폰트 처리
- * - 둥근 모서리 디자인
- * - 호버 효과
- */
+// 로그인 화면
 public class LoginFrame extends JFrame {
-    // 색상 팔레트 - 밝은 주황색 테마
+    // 색상 팔레트
     private static final Color PRIMARY = new Color(255, 159, 64);       // 밝은 주황색
     private static final Color PRIMARY_HOVER = new Color(255, 140, 40); // 약간 진한 주황색
     private static final Color BG_COLOR = new Color(255, 247, 237);     // 연한 주황 배경
@@ -152,7 +146,6 @@ public class LoginFrame extends JFrame {
 
         return panel;
     }
-    // 프로젝트 resources 폴더에서 커스텀 폰트 로드하기
 
     private Font loadCustomFont(String fontFileName, int style, int size) {
         try {
@@ -166,16 +159,11 @@ public class LoginFrame extends JFrame {
                 return derivedFont;
             }
         } catch (Exception e) {
-            // 폰트 로드 실패 시 조용히 fallback
         }
 
-        // 실패 시 시스템 폰트 반환
         return new Font("Dialog", style, size);
     }
 
-    /**
-     * 한국어를 지원하는 안전한 폰트를 반환 (Fallback용)
-     */
     private Font getKoreanFont(int style, int size) {
         // 기본적으로 나눔고딕 시도
         Font font = new Font("NanumGothic", style, size);
@@ -259,7 +247,6 @@ public class LoginFrame extends JFrame {
         btn.setEnabled(false);
         btn.addActionListener(e -> connectAndOpenChat());
 
-        // 활성화/비활성화 상태에 따라 글씨 색 변경
         btn.addPropertyChangeListener("enabled", evt -> {
             if ((Boolean) evt.getNewValue()) {
                 btn.setForeground(Color.WHITE);
@@ -268,7 +255,6 @@ public class LoginFrame extends JFrame {
             }
         });
 
-        // 초기 비활성화 상태 색상 설정
         btn.setForeground(new Color(156, 163, 175));
 
         return btn;
@@ -337,11 +323,8 @@ public class LoginFrame extends JFrame {
         worker.execute();
     }
 
-    // ========== 커스텀 컴포넌트 ==========
 
-    /**
-     * 둥근 모서리 패널
-     */
+    // 둥근 모서리 패널
     static class RoundedPanel extends JPanel {
         private final int radius;
 
@@ -360,10 +343,7 @@ public class LoginFrame extends JFrame {
             super.paintComponent(g);
         }
     }
-
-    /**
-     * 둥근 모서리 테두리
-     */
+    //둥근 모서리 테두리
     static class RoundedBorder extends EmptyBorder {
         private final int radius;
         private final Color normalColor;
@@ -393,9 +373,7 @@ public class LoginFrame extends JFrame {
             g2.dispose();
         }
     }
-
-    // ========== 메인 ==========
-
+    // 메인
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

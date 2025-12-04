@@ -4,21 +4,12 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.JTextField;
 import java.awt.*;
 
-/**
- * RoundedBorder
- * - 둥근 모서리 테두리
- * - JTextField가 포커스를 가질 때 색상/두께를 변경해 시각 피드백 제공
- */
+// RoundedBorder : 둥근 모서리 테두리
 public class RoundedBorder extends EmptyBorder {
     private final int radius;
     private final Color normalColor;
     private final Color focusColor;
 
-    /**
-     * @param radius      모서리 둥글기
-     * @param normalColor 기본 보더 색
-     * @param focusColor  포커스 시 보더 색
-     */
     public RoundedBorder(int radius, Color normalColor, Color focusColor) {
         super(10, 14, 10, 14); // 내용 패딩
         this.radius = radius;
@@ -31,7 +22,6 @@ public class RoundedBorder extends EmptyBorder {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // JTextField 포커스 여부에 따라 색/두께 변경
         if (c instanceof JTextField && ((JTextField) c).hasFocus()) {
             g2.setColor(focusColor);
             g2.setStroke(new BasicStroke(2));
